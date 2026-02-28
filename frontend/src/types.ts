@@ -61,20 +61,19 @@ export interface ScoreBreakdown {
 }
 
 export interface ScoreResponse {
-  fit_score: number;
+  overall_score: number;
   breakdown: ScoreBreakdown;
   matched_skills: string[];
   missing_skills: string[];
   partially_matched: { required: string; has: string; similarity: number }[];
   suggestions: string[];
-  processing_time_ms: number;
 }
 
 export interface RankedCandidate {
   rank: number;
   resume_id: string;
   candidate_name: string;
-  fit_score: number;
+  overall_score: number;
   breakdown: ScoreBreakdown;
   suggestions: string[];
 }

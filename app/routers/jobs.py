@@ -71,7 +71,7 @@ async def get_job_by_id(job_id: str):
 @router.get("", response_model=PaginatedJobs)
 async def list_all_jobs(
     page: int = Query(1, ge=1),
-    per_page: int = Query(20, ge=1, le=100),
+    per_page: int = Query(20, ge=1, le=500),
 ):
     """List all job descriptions with pagination."""
     result = list_jobs(page=page, per_page=per_page)
@@ -86,5 +86,5 @@ def _build_text(payload: JobCreateRequest) -> str:
     if payload.experience_years is not None:
         parts.append(f"Experience required: {payload.experience_years} years")
     if payload.education:
-        parts.append(f"Education: {payload.education.degree} in {payload.education.field}")
+        parts.append(f"Education: {payload.education.degree_level or ''} in {payload.education.field or ''}")
     return "\n".join(parts)

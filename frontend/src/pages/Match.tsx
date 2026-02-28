@@ -252,7 +252,7 @@ export default function Match() {
           >
             <div className="flex items-start gap-8">
               {/* Score ring */}
-              <ScoreRing score={singleResult.fit_score} size={130} strokeWidth={10} label="Fit Score" />
+              <ScoreRing score={singleResult.overall_score} size={130} strokeWidth={10} label="Fit Score" />
 
               {/* Breakdown */}
               <div className="flex-1 min-w-0">
@@ -349,7 +349,7 @@ export default function Match() {
             )}
 
             <p className="text-xs mt-3 text-right" style={{ color: 'var(--text-tertiary)' }}>
-              Processed in {singleResult.processing_time_ms.toFixed(0)}ms
+              Score computed
             </p>
           </motion.div>
         )}
@@ -404,7 +404,7 @@ export default function Match() {
                   </div>
 
                   {/* Score */}
-                  <ScoreRing score={c.fit_score} size={56} strokeWidth={5} animate={true} />
+                  <ScoreRing score={c.overall_score} size={56} strokeWidth={5} animate={true} />
                 </motion.div>
               ))}
             </div>

@@ -31,7 +31,14 @@ async def score_pair(payload: ScoreRequest):
         raise HTTPException(status_code=404, detail=f"Job not found: {payload.job_id}")
 
     result = compute_fit_score(resume, job)
-    return ScoreResponse(**result)
+    return ScoreResponse(
+        overall_score=result["fit_score"],
+        breakdown=result["breakdown"],
+        matched_skills=result["matched_skills"],
+        missing_skills=result["missing_skills"],
+        partially_matched=result.get("partially_matched", []),
+        suggestions=result.get("suggestions", []),
+    )
 
 
 @router.post("/batch", response_model=BatchScoreResponse)
@@ -53,14 +60,16 @@ async def score_batch(payload: BatchScoreRequest):
             RankedCandidate(
                 resume_id=rid,
                 candidate_name=resume.get("candidate_name", ""),
-                fit_score=result["fit_score"],
+                overall_score=result["fit_score"],
                 breakdown=result["breakdown"],
-                suggestions=result["suggestions"],
+                matched_skills=result["matched_skills"],
+                missing_skills=result["missing_skills"],
+                suggestions=result.get("suggestions", []),
             )
         )
 
-    # Sort descending by fit score, assign ranks
-    candidates.sort(key=lambda c: c.fit_score, reverse=True)
+    # Sort descending by score, assign ranks
+    candidates.sort(key=lambda c: c.overall_score, reverse=True)
     for idx, c in enumerate(candidates):
         c.rank = idx + 1
 

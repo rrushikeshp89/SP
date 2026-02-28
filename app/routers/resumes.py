@@ -110,7 +110,7 @@ async def get_resume_by_id(resume_id: str):
 @router.get("", response_model=PaginatedResumes)
 async def list_all_resumes(
     page: int = Query(1, ge=1),
-    per_page: int = Query(20, ge=1, le=100),
+    per_page: int = Query(20, ge=1, le=500),
 ):
     """List all resumes with pagination."""
     result = list_resumes(page=page, per_page=per_page)

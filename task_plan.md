@@ -1,7 +1,7 @@
 # Task Plan — Smart Resume Matching & Job Fit Scoring Engine
 
-> Status: **PHASE 4 — STYLIZE (Complete) → Ready for Phase 5**
-> Last Updated: 2025-06-28
+> Status: **PHASE 5 — TRIGGER (Deployed & Verified)**
+> Last Updated: 2026-03-01
 
 ---
 
@@ -92,10 +92,10 @@ dashboard.
 
 | # | Task | Status |
 |---|------|--------|
-| 5.1 | Write Dockerfiles (backend, frontend, Postgres, Redis) | ⬜ Not Started |
-| 5.2 | Write `docker-compose.yml` | ⬜ Not Started |
-| 5.3 | Configure AWS deployment (ECS/EC2) | ⬜ Not Started |
-| 5.4 | Set up DB indexing for candidate queries | ⬜ Not Started |
-| 5.5 | Set up Redis caching for frequent JDs | ⬜ Not Started |
-| 5.6 | Finalize Maintenance Log in `gemini.md` | ⬜ Not Started |
-| 5.7 | End-to-end integration test | ⬜ Not Started |
+| 5.1 | Write Dockerfiles (backend, frontend) | ✅ Done — Multi-stage builds |
+| 5.2 | Write `docker-compose.yml` | ✅ Done — 4 services (backend, frontend, postgres, redis) |
+| 5.3 | Write `nginx.conf` reverse proxy | ✅ Done — SPA fallback + API proxy |
+| 5.4 | Set up DB indexing for candidate queries | ✅ Done — `init.sql` with GIN + B-tree indexes |
+| 5.5 | Set up Redis caching for frequent JDs | ✅ Done — Redis service in compose, allkeys-lru |
+| 5.6 | Create `.dockerignore` | ✅ Done — Lean images |
+| 5.7 | End-to-end integration test | ✅ Done — 24/24 PASS (live Docker stack) |

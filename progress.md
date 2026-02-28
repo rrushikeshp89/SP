@@ -192,3 +192,45 @@ _None._
 
 ### Next Steps
 - Phase 5: Trigger (Docker, deployment, E2E testing)
+
+---
+
+## Session 5 — 2026-03-01
+
+### What Was Done
+- **Phase 5: Trigger (Deployment) — COMPLETE**
+
+#### Docker Stack (4 services)
+| Service | Container | Image | Port | Status |
+|---------|-----------|-------|------|--------|
+| PostgreSQL 16 | tesseract-postgres | postgres:16-alpine | 5433:5432 | ✅ Healthy |
+| Redis 7 | tesseract-redis | redis:7-alpine | 6380:6379 | ✅ Healthy |
+| Backend (FastAPI) | tesseract-backend | sp-backend | 8000:8000 | ✅ Healthy |
+| Frontend (Nginx+React) | tesseract-frontend | sp-frontend | 3000:80 | ✅ Healthy |
+
+#### Fixes Applied During Deployment
+- **Pydantic model alignment**: Fixed `JobCreateRequest`, `JobResponse`, `PaginatedJobs`, `PaginatedResumes`, and all score models to match router code, DB schema, and E2E test expectations
+- **Scoring router**: Mapped `fit_score` → `overall_score`, proper field construction for `ScoreResponse` and `BatchScoreResponse`
+- **Frontend types**: Updated `ScoreResponse` and `RankedCandidate` to use `overall_score` instead of `fit_score`
+- **Docker healthcheck**: Frontend changed from `wget` to `curl` (nginx:alpine)
+- **Port mapping**: Postgres (5433) and Redis (6380) remapped to avoid conflicts with local services
+- **Syntax fix**: Removed stray `)` in scoring.py
+
+#### E2E Integration Tests — 24/24 PASS
+| Test Class | Tests | Result |
+|-----------|-------|--------|
+| TestHealthCheck | 2 | 2/2 PASS |
+| TestResumeUpload | 6 | 6/6 PASS |
+| TestJobCreation | 5 | 5/5 PASS |
+| TestScoring | 5 | 5/5 PASS |
+| TestEdgeCases | 5 | 5/5 PASS |
+| TestFullPipeline | 1 | 1/1 PASS |
+
+### Errors
+- Initial E2E run: 7 passed, 16 errors, 1 failed (Pydantic model mismatches)
+- Fixed all mismatches → 24/24 PASS
+
+### Decisions Made
+1. **Port remapping**: External ports changed to 5433/6380 to coexist with local PostgreSQL/Redis
+2. **API contract**: Standardized on `job_id` (not `jd_id`), `overall_score` (not `fit_score`), `items` (not `resumes`/`jobs`)
+3. **Healthcheck**: Frontend uses `curl` instead of `wget` in nginx:alpine

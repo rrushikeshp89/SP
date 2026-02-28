@@ -1,0 +1,53 @@
+# ============================================
+# Docker ignore — keep images lean
+# ============================================
+
+# Version control
+.git
+.gitignore
+
+# Python
+__pycache__
+*.py[cod]
+*.egg-info
+.venv
+venv
+.pytest_cache
+.mypy_cache
+
+# Node
+frontend/node_modules
+frontend/.vite
+frontend/dist
+
+# Temp files
+.tmp/*
+!.tmp/README.md
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Docs (not needed in image)
+*.md
+!architecture/*.md
+!tools/data/README.md
+findings.md
+progress.md
+task_plan.md
+gemini.md
+
+# Docker files themselves
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# OS
+.DS_Store
+Thumbs.db
+
+# ML model cache (downloaded at build)
+models/
+*.bin

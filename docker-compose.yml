@@ -1,0 +1,110 @@
+# ============================================
+# Smart Resume Matching Engine — Docker Compose
+# Full stack: Backend + Frontend + PostgreSQL + Redis
+# ============================================
+
+services:
+  # ── PostgreSQL ──
+  postgres:
+    image: postgres:16-alpine
+    container_name: tesseract-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: resume_engine
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d resume_engine"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - tesseract-net
+
+  # ── Redis ──
+  redis:
+    image: redis:7-alpine
+    container_name: tesseract-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --maxmemory 128mb
+      --maxmemory-policy allkeys-lru
+      --appendonly yes
+    ports:
+      - "6380:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tesseract-net
+
+  # ── Backend (FastAPI) ──
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: tesseract-backend
+    restart: unless-stopped
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=resume_engine
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=
+      - EMBEDDING_MODEL=all-MiniLM-L6-v2
+      - APP_HOST=0.0.0.0
+      - APP_PORT=8000
+      - APP_ENV=production
+      - LOG_LEVEL=info
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - model_cache:/root/.cache/huggingface
+      - ./tools/data:/app/tools/data:ro
+    networks:
+      - tesseract-net
+
+  # ── Frontend (Nginx + React) ──
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: tesseract-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - tesseract-net
+
+volumes:
+  pgdata:
+    driver: local
+  redisdata:
+    driver: local
+  model_cache:
+    driver: local
+
+networks:
+  tesseract-net:
+    driver: bridge

@@ -197,7 +197,7 @@ export default function Rankings() {
                         {c.candidate_name}
                       </p>
                     </div>
-                    <ScoreRing score={c.fit_score} size={40} strokeWidth={4} animate={false} />
+                    <ScoreRing score={c.overall_score} size={40} strokeWidth={4} animate={false} />
                   </button>
                 ))}
               </div>
@@ -215,7 +215,7 @@ export default function Rankings() {
                 style={{ background: 'var(--bg-card)', borderColor: 'var(--border-light)', boxShadow: 'var(--shadow-md)' }}
               >
                 <div className="flex items-start gap-6 mb-6">
-                  <ScoreRing score={selected.fit_score} size={110} strokeWidth={9} label="Fit Score" />
+                  <ScoreRing score={selected.overall_score} size={110} strokeWidth={9} label="Fit Score" />
                   <div className="flex-1">
                     <h3 className="text-lg font-bold mb-1" style={{ color: 'var(--text-primary)' }}>
                       {selected.candidate_name}
