@@ -1,0 +1,61 @@
+# ============================================
+# Smart Resume Matching Engine — .gitignore
+# ============================================
+
+# Environment
+.env
+.env.local
+.env.production
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+*.egg
+.venv/
+venv/
+env/
+
+# Temporary processing
+.tmp/*
+!.tmp/README.md
+
+# ML Models (large files)
+models/
+*.bin
+*.pt
+*.onnx
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Node / React
+node_modules/
+frontend/build/
+frontend/dist/
+.next/
+
+# Docker
+docker-compose.override.yml
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Test coverage
+.coverage
+htmlcov/
+.pytest_cache/

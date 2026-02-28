@@ -1,0 +1,78 @@
+{
+  "programming_languages": {
+    "Python": ["python", "python3", "py"],
+    "JavaScript": ["javascript", "js", "ecmascript"],
+    "TypeScript": ["typescript", "ts"],
+    "Java": ["java"],
+    "C++": ["c++", "cpp", "cplusplus"],
+    "C#": ["c#", "csharp", "c sharp"],
+    "Go": ["golang"],
+    "Rust": ["rust"],
+    "Ruby": ["ruby"],
+    "PHP": ["php"],
+    "Swift": ["swift"],
+    "Kotlin": ["kotlin"],
+    "R": ["\\br\\b"],
+    "SQL": ["sql", "t-sql", "plsql", "pl/sql"]
+  },
+  "frameworks": {
+    "React": ["react", "reactjs", "react.js"],
+    "FastAPI": ["fastapi", "fast-api"],
+    "Django": ["django"],
+    "Flask": ["flask"],
+    "Spring Boot": ["spring boot", "springboot", "spring"],
+    "Next.js": ["nextjs", "next.js"],
+    "Vue.js": ["vuejs", "vue.js", "vue"],
+    "Angular": ["angular", "angularjs"],
+    "Express.js": ["express", "expressjs", "express.js"],
+    "Node.js": ["node", "nodejs", "node.js"]
+  },
+  "databases": {
+    "PostgreSQL": ["postgresql", "postgres", "psql"],
+    "MySQL": ["mysql"],
+    "MongoDB": ["mongodb", "mongo"],
+    "Redis": ["redis"],
+    "SQLite": ["sqlite"],
+    "Elasticsearch": ["elasticsearch", "elastic"],
+    "DynamoDB": ["dynamodb", "dynamo"]
+  },
+  "cloud_devops": {
+    "AWS": ["aws", "amazon web services"],
+    "Azure": ["azure", "microsoft azure"],
+    "GCP": ["gcp", "google cloud", "google cloud platform"],
+    "Docker": ["docker"],
+    "Kubernetes": ["kubernetes", "k8s"],
+    "Terraform": ["terraform"],
+    "CI/CD": ["ci/cd", "cicd", "continuous integration", "continuous deployment"],
+    "Jenkins": ["jenkins"],
+    "GitHub Actions": ["github actions", "gh actions"]
+  },
+  "data_ml": {
+    "Machine Learning": ["machine learning", "ml"],
+    "Deep Learning": ["deep learning", "dl"],
+    "NLP": ["nlp", "natural language processing"],
+    "TensorFlow": ["tensorflow", "tf"],
+    "PyTorch": ["pytorch"],
+    "Pandas": ["pandas"],
+    "NumPy": ["numpy"],
+    "Scikit-learn": ["scikit-learn", "sklearn"],
+    "Computer Vision": ["computer vision", "cv"],
+    "Data Analysis": ["data analysis", "data analytics"]
+  },
+  "tools_practices": {
+    "Git": ["git", "github", "gitlab", "bitbucket"],
+    "REST API": ["rest api", "restful", "rest"],
+    "GraphQL": ["graphql"],
+    "Agile": ["agile", "scrum", "kanban"],
+    "Jira": ["jira"],
+    "Linux": ["linux", "ubuntu", "centos"],
+    "Microservices": ["microservices", "micro-services"]
+  },
+  "soft_skills": {
+    "Leadership": ["leadership", "team lead", "leading teams"],
+    "Communication": ["communication", "communicating"],
+    "Problem Solving": ["problem solving", "problem-solving", "troubleshooting"],
+    "Teamwork": ["teamwork", "team player", "collaboration", "collaborative"],
+    "Project Management": ["project management", "managing projects"]
+  }
+}
