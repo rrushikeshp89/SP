@@ -84,8 +84,9 @@ export default function Shell() {
         >
           <Menu size={18} />
         </button>
-        <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-          ResumeAI
+        <img src="/logo.png" alt="Tesseract" style={{ width: 28, height: 28, objectFit: 'contain' }} />
+        <span className="text-sm font-extrabold tracking-widest uppercase" style={{ color: '#7c3aed' }}>
+          Tesseract
         </span>
       </header>
 

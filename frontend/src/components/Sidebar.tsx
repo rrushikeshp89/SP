@@ -8,7 +8,6 @@ import {
   Trophy,
   Sun,
   Moon,
-  Sparkles,
   X,
   Command,
 } from 'lucide-react';
@@ -44,23 +43,34 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
       <div className="px-6 pt-8 pb-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div
-              className="flex items-center justify-center rounded-2xl"
+            <img
+              src="/logo.png"
+              alt="Tesseract"
+              className="rounded-xl shrink-0"
               style={{
                 width: 44,
                 height: 44,
-                background: 'linear-gradient(135deg, #a78bfa, #7c3aed)',
-                boxShadow: '0 4px 14px -2px rgba(139, 92, 246, 0.45)',
+                objectFit: 'contain',
               }}
-            >
-              <Sparkles size={22} color="#fff" />
-            </div>
+            />
             <div>
-              <span className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>
-                ResumeAI
+              <span
+                className="text-base font-extrabold tracking-widest uppercase"
+                style={{
+                  color: '#7c3aed',
+                  letterSpacing: '0.12em',
+                }}
+              >
+                TESSERACT
               </span>
-              <span className="block text-[11px] font-medium" style={{ color: 'var(--text-tertiary)' }}>
-                Smart Matching
+              <span
+                className="block text-[10px] font-semibold tracking-[0.2em] uppercase"
+                style={{
+                  color: '#7c3aed',
+                  opacity: 0.7,
+                }}
+              >
+                MATCH PERFECTLY
               </span>
             </div>
           </div>
