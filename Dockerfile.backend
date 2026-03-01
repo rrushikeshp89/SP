@@ -3,7 +3,7 @@
 # CPU-only build (no CUDA) for lean images
 # ============================================
 
-FROM python:3.11-slim
+FROM python:3.13-slim
 
 WORKDIR /app
 
