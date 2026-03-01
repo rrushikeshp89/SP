@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
+  Briefcase,
   Trophy,
   Loader2,
 } from 'lucide-react';
@@ -18,6 +19,8 @@ import ScoreRing from '../components/ScoreRing';
 import ScoreBar from '../components/ScoreBar';
 import EmptyState from '../components/EmptyState';
 import PageHeader from '../components/PageHeader';
+import CustomSelect from '../components/CustomSelect';
+import type { SelectOption } from '../components/CustomSelect';
 import { useToast } from '../components/Toast';
 import type { Resume, Job, BatchScoreResponse, RankedCandidate } from '../types';
 
@@ -120,19 +123,18 @@ export default function Rankings() {
           <label className="text-xs font-semibold mb-2 block" style={{ color: 'var(--text-secondary)' }}>
             Job Position
           </label>
-          <select
+          <CustomSelect
             value={selectedJob}
-            onChange={(e) => setSelectedJob(e.target.value)}
-            className="w-full px-3 py-2.5 text-sm rounded-lg border outline-none"
-            style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-light)', color: 'var(--text-primary)' }}
-          >
-            <option value="">Choose a job...</option>
-            {jobs.map((j) => (
-              <option key={j.job_id} value={j.job_id}>
-                {j.title} {j.company ? `— ${j.company}` : ''}
-              </option>
-            ))}
-          </select>
+            onChange={setSelectedJob}
+            placeholder="Choose a job…"
+            searchable={jobs.length > 5}
+            icon={<Briefcase size={15} />}
+            options={jobs.map((j): SelectOption => ({
+              value: j.job_id,
+              label: j.title,
+              sub: j.company || undefined,
+            }))}
+          />
         </div>
         <motion.button
           whileHover={{ scale: 1.01 }}

@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BarChart3,
+  Briefcase,
   Loader2,
+  Users,
   Zap,
   ChevronRight,
 } from 'lucide-react';
@@ -12,6 +14,8 @@ import ScoreBar from '../components/ScoreBar';
 import SkillBadge from '../components/SkillBadge';
 import EmptyState from '../components/EmptyState';
 import PageHeader from '../components/PageHeader';
+import CustomSelect from '../components/CustomSelect';
+import type { SelectOption } from '../components/CustomSelect';
 import { useToast } from '../components/Toast';
 import type { Resume, Job, ScoreResponse, BatchScoreResponse } from '../types';
 
@@ -156,19 +160,18 @@ export default function Match() {
             <label className="text-xs font-semibold mb-2 block" style={{ color: 'var(--text-secondary)' }}>
               Select Job Description
             </label>
-            <select
+            <CustomSelect
               value={selectedJob}
-              onChange={(e) => setSelectedJob(e.target.value)}
-              className="w-full px-3 py-2.5 text-sm rounded-lg border outline-none"
-              style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-light)', color: 'var(--text-primary)' }}
-            >
-              <option value="">Choose a job...</option>
-              {jobs.map((j) => (
-                <option key={j.job_id} value={j.job_id}>
-                  {j.title} {j.company ? `— ${j.company}` : ''}
-                </option>
-              ))}
-            </select>
+              onChange={setSelectedJob}
+              placeholder="Choose a job…"
+              searchable={jobs.length > 5}
+              icon={<Briefcase size={15} />}
+              options={jobs.map((j): SelectOption => ({
+                value: j.job_id,
+                label: j.title,
+                sub: j.company || undefined,
+              }))}
+            />
           </div>
 
           {/* Resume Select (single) / Multi-select (batch) */}
@@ -177,19 +180,18 @@ export default function Match() {
               {mode === 'single' ? 'Select Resume' : `Select Resumes (${selectedResumes.length || 'all'})`}
             </label>
             {mode === 'single' ? (
-              <select
+              <CustomSelect
                 value={selectedResume}
-                onChange={(e) => setSelectedResume(e.target.value)}
-                className="w-full px-3 py-2.5 text-sm rounded-lg border outline-none"
-                style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-light)', color: 'var(--text-primary)' }}
-              >
-                <option value="">Choose a resume...</option>
-                {resumes.map((r) => (
-                  <option key={r.resume_id} value={r.resume_id}>
-                    {r.candidate_name}
-                  </option>
-                ))}
-              </select>
+                onChange={setSelectedResume}
+                placeholder="Choose a resume…"
+                searchable={resumes.length > 5}
+                icon={<Users size={15} />}
+                options={resumes.map((r): SelectOption => ({
+                  value: r.resume_id,
+                  label: r.candidate_name,
+                  sub: `${r.skills.length} skills`,
+                }))}
+              />
             ) : (
               <div
                 className="max-h-40 overflow-y-auto rounded-lg border p-2 flex flex-col gap-1"
