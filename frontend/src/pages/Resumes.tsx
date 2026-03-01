@@ -10,11 +10,13 @@ import {
   Search,
   Loader2,
   FileUp,
+  Trash2,
 } from 'lucide-react';
-import { uploadResume, listResumes } from '../api';
+import { uploadResume, listResumes, deleteResume } from '../api';
 import SkillBadge from '../components/SkillBadge';
 import EmptyState from '../components/EmptyState';
 import PageHeader from '../components/PageHeader';
+import ConfirmModal from '../components/ConfirmModal';
 import { useToast } from '../components/Toast';
 import type { Resume } from '../types';
 
@@ -33,6 +35,10 @@ export default function Resumes() {
   const [search, setSearch] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
+  /* ── Delete State ── */
+  const [deleteTarget, setDeleteTarget] = useState<Resume | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
   const fetchResumes = useCallback(() => {
     setLoading(true);
     listResumes(1, 100)
@@ -42,6 +48,23 @@ export default function Resumes() {
   }, []);
 
   useEffect(() => { fetchResumes(); }, [fetchResumes]);
+
+  /* ── Delete Handler ── */
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await deleteResume(deleteTarget.resume_id);
+      toast.success('Resume deleted', `"${deleteTarget.candidate_name}" has been removed.`);
+      setResumes((prev) => prev.filter((r) => r.resume_id !== deleteTarget.resume_id));
+      if (expandedId === deleteTarget.resume_id) setExpandedId(null);
+    } catch (err: any) {
+      toast.error('Delete failed', err?.response?.data?.detail || 'Could not delete the resume.');
+    } finally {
+      setDeleting(false);
+      setDeleteTarget(null);
+    }
+  };
 
   /* ── Dropzone ── */
   const onDrop = useCallback((accepted: File[]) => {
@@ -365,6 +388,27 @@ export default function Resumes() {
                               {r.raw_text.slice(0, 800)}
                               {r.raw_text.length > 800 && '...'}
                             </p>
+
+                            {/* Delete button */}
+                            <div className="mt-4 flex justify-end">
+                              <motion.button
+                                whileHover={{ scale: 1.03 }}
+                                whileTap={{ scale: 0.96 }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDeleteTarget(r);
+                                }}
+                                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-colors"
+                                style={{
+                                  background: 'rgba(239, 68, 68, 0.08)',
+                                  color: '#ef4444',
+                                  border: '1px solid rgba(239, 68, 68, 0.18)',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                <Trash2 size={13} /> Delete Resume
+                              </motion.button>
+                            </div>
                           </div>
                         </motion.div>
                       )}
@@ -376,6 +420,22 @@ export default function Resumes() {
           )}
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        open={!!deleteTarget}
+        title="Delete Resume?"
+        description={
+          deleteTarget
+            ? `This will permanently remove "${deleteTarget.candidate_name}" and all associated data. This action cannot be undone.`
+            : ''
+        }
+        confirmLabel="Delete Resume"
+        loading={deleting}
+        variant="danger"
+        onConfirm={handleDelete}
+        onCancel={() => !deleting && setDeleteTarget(null)}
+      />
     </div>
   );
 }

@@ -11,7 +11,7 @@ from fastapi import APIRouter, HTTPException, Query
 from app.models.job import JobCreateRequest, JobResponse, PaginatedJobs
 from tools.vectorizer import embed_text
 from tools.skill_extractor import extract_skills
-from tools.db_handler import save_job, get_job, list_jobs
+from tools.db_handler import save_job, get_job, list_jobs, delete_job
 
 router = APIRouter(prefix="/api/jobs", tags=["Jobs"])
 
@@ -76,6 +76,15 @@ async def list_all_jobs(
     """List all job descriptions with pagination."""
     result = list_jobs(page=page, per_page=per_page)
     return PaginatedJobs(**result)
+
+
+@router.delete("/{job_id}", status_code=204)
+async def remove_job(job_id: str):
+    """Delete a job description by ID."""
+    deleted = delete_job(job_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail=f"Job not found: {job_id}")
+    return None
 
 
 def _build_text(payload: JobCreateRequest) -> str:

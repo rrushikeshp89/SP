@@ -233,6 +233,24 @@ def list_jobs(page: int = 1, per_page: int = 20) -> dict[str, Any]:
     }
 
 
+# ── Delete Operations ─────────────────────────────────
+
+def delete_resume(resume_id: str) -> bool:
+    """Delete a resume by ID. Returns True if a row was actually deleted."""
+    with _get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM resumes WHERE resume_id = %s", (resume_id,))
+            return cur.rowcount > 0
+
+
+def delete_job(job_id: str) -> bool:
+    """Delete a job by ID. Returns True if a row was actually deleted."""
+    with _get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM jobs WHERE job_id = %s", (job_id,))
+            return cur.rowcount > 0
+
+
 # ── Helpers ──────────────────────────────────────────
 
 def _deserialize_row(row: dict) -> dict:

@@ -21,7 +21,7 @@ from app.models.resume import (
 from tools.text_extractor import extract_text
 from tools.vectorizer import embed_text
 from tools.skill_extractor import extract_skills
-from tools.db_handler import save_resume, get_resume, list_resumes
+from tools.db_handler import save_resume, get_resume, list_resumes, delete_resume
 
 router = APIRouter(prefix="/api/resumes", tags=["Resumes"])
 
@@ -115,6 +115,15 @@ async def list_all_resumes(
     """List all resumes with pagination."""
     result = list_resumes(page=page, per_page=per_page)
     return PaginatedResumes(**result)
+
+
+@router.delete("/{resume_id}", status_code=204)
+async def remove_resume(resume_id: str):
+    """Delete a resume by ID."""
+    deleted = delete_resume(resume_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail=f"Resume not found: {resume_id}")
+    return None
 
 
 def _cleanup(path: Path):

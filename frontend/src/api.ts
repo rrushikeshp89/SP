@@ -34,6 +34,9 @@ export const getResume = (id: string) =>
 export const listResumes = (page = 1, perPage = 20) =>
   api.get<PaginatedResumes>('/resumes', { params: { page, per_page: perPage } }).then((r) => r.data);
 
+export const deleteResume = (id: string) =>
+  api.delete(`/resumes/${id}`).then(() => {});
+
 /* ── Jobs ── */
 export const createJob = (data: {
   title: string;
@@ -49,6 +52,9 @@ export const getJob = (id: string) =>
 
 export const listJobs = (page = 1, perPage = 20) =>
   api.get<PaginatedJobs>('/jobs', { params: { page, per_page: perPage } }).then((r) => r.data);
+
+export const deleteJob = (id: string) =>
+  api.delete(`/jobs/${id}`).then(() => {});
 
 /* ── Scoring ── */
 export const scoreOne = (resumeId: string, jobId: string) =>
