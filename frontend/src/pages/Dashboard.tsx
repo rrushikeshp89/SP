@@ -23,8 +23,8 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import StatCard from '../components/StatCard';
-import { listResumes, listJobs, getHealth } from '../api';
-import type { Resume, Job, HealthResponse } from '../types';
+import { listResumes, listJobs, getHealth, getStats } from '../api';
+import type { Resume, Job, HealthResponse, DashboardStats } from '../types';
 
 const container = {
   hidden: { opacity: 0 },
@@ -39,15 +39,36 @@ const item = {
   show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.25, 0.1, 0.25, 1] as const } },
 };
 
-const ACTIVITY_DATA = [
-  { day: 'Mon', resumes: 3, matches: 8 },
-  { day: 'Tue', resumes: 5, matches: 12 },
-  { day: 'Wed', resumes: 2, matches: 6 },
-  { day: 'Thu', resumes: 7, matches: 18 },
-  { day: 'Fri', resumes: 4, matches: 14 },
-  { day: 'Sat', resumes: 1, matches: 3 },
-  { day: 'Sun', resumes: 0, matches: 1 },
-];
+/** Build a 7-day activity array from stats, anchored to today. */
+function buildActivityData(stats: DashboardStats | null) {
+  const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const today = new Date();
+  const result: { day: string; resumes: number; jobs: number }[] = [];
+
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    const label = DAYS[d.getDay()];
+    result.push({
+      day: label,
+      resumes: stats?.resume_by_day[label] ?? 0,
+      jobs: stats?.jobs_by_day[label] ?? 0,
+    });
+  }
+  return result;
+}
+
+/** Compute week-over-week trend string. */
+function trend(thisWeek: number, prevWeek: number): { text: string; up: boolean } | null {
+  if (prevWeek === 0 && thisWeek === 0) return null;
+  if (prevWeek === 0) return { text: '+100%', up: true };
+  const pct = ((thisWeek - prevWeek) / prevWeek) * 100;
+  const sign = pct >= 0 ? '+' : '';
+  return { text: `${sign}${pct.toFixed(1)}%`, up: pct >= 0 };
+}
+
+/** Auto-refresh interval (ms). */
+const POLL_INTERVAL = 15_000;
 
 function useAnimatedCount(target: number, duration = 1200) {
   const [count, setCount] = useState(0);
@@ -69,25 +90,37 @@ export default function Dashboard() {
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [health, setHealth] = useState<HealthResponse | null>(null);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const fetchAll = () =>
     Promise.all([
       listResumes(1, 5).catch(() => ({ items: [], total: 0, page: 1, per_page: 5 })),
       listJobs(1, 5).catch(() => ({ items: [], total: 0, page: 1, per_page: 5 })),
       getHealth().catch(() => null),
-    ]).then(([rData, jData, h]) => {
+      getStats().catch(() => null),
+    ]).then(([rData, jData, h, s]) => {
       setResumes(rData.items);
       setJobs(jData.items);
       setHealth(h);
+      setStats(s);
       setLoading(false);
     });
+
+  useEffect(() => {
+    fetchAll();
+    const id = setInterval(fetchAll, POLL_INTERVAL);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const totalResumes = resumes.length;
-  const totalJobs = jobs.length;
+  const totalResumes = stats?.total_resumes ?? 0;
+  const totalJobs = stats?.total_jobs ?? 0;
   const animResumes = useAnimatedCount(totalResumes);
   const animJobs = useAnimatedCount(totalJobs);
+  const resumeTrend = trend(stats?.this_week_resumes ?? 0, stats?.prev_week_resumes ?? 0);
+  const jobTrend = trend(stats?.this_week_jobs ?? 0, stats?.prev_week_jobs ?? 0);
+  const activityData = buildActivityData(stats);
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good Morning' : hour < 18 ? 'Good Afternoon' : 'Good Evening';
 
@@ -163,10 +196,10 @@ export default function Dashboard() {
 
       {/* ── Stats ── */}
       <motion.div variants={item} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
-        <StatCard icon={<Users size={20} />} label="Total Resumes" value={animResumes} sub="Candidates uploaded" color="#a78bfa" trend="+14.8%" trendUp={true} delay={0} />
-        <StatCard icon={<Briefcase size={20} />} label="Active Jobs" value={animJobs} sub="Open positions" color="#34d399" trend="+5.2%" trendUp={true} delay={0.06} />
-        <StatCard icon={<Target size={20} />} label="Matches Run" value="—" sub="Score comparisons" color="#fb7185" delay={0.12} />
-        <StatCard icon={<Zap size={20} />} label="Avg Fit Score" value="—" sub="Across all matches" color="#38bdf8" delay={0.18} />
+        <StatCard icon={<Users size={20} />} label="Total Resumes" value={animResumes} sub="Candidates uploaded" color="#a78bfa" trend={resumeTrend?.text} trendUp={resumeTrend?.up} delay={0} />
+        <StatCard icon={<Briefcase size={20} />} label="Active Jobs" value={animJobs} sub="Open positions" color="#34d399" trend={jobTrend?.text} trendUp={jobTrend?.up} delay={0.06} />
+        <StatCard icon={<Target size={20} />} label="This Week" value={(stats?.this_week_resumes ?? 0) + (stats?.this_week_jobs ?? 0)} sub="Uploads this week" color="#fb7185" delay={0.12} />
+        <StatCard icon={<Zap size={20} />} label="Last Week" value={(stats?.prev_week_resumes ?? 0) + (stats?.prev_week_jobs ?? 0)} sub="Uploads last week" color="#38bdf8" delay={0.18} />
       </motion.div>
 
       {/* ── Quick Actions — Primary / Secondary / Tertiary hierarchy ── */}
@@ -259,7 +292,7 @@ export default function Dashboard() {
           <div className="flex items-center justify-between mb-5">
             <div>
               <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Weekly Activity</h3>
-              <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>Uploads and matches this week</p>
+              <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>Uploads over the last 7 days</p>
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-1.5">
@@ -268,19 +301,19 @@ export default function Dashboard() {
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="w-2.5 h-2.5 rounded-full" style={{ background: '#34d399' }} />
-                <span className="text-[11px]" style={{ color: 'var(--text-tertiary)' }}>Matches</span>
+                <span className="text-[11px]" style={{ color: 'var(--text-tertiary)' }}>Jobs</span>
               </div>
             </div>
           </div>
           <div style={{ height: 220 }}>
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={ACTIVITY_DATA} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+              <AreaChart data={activityData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="gradResumes" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#a78bfa" stopOpacity={0.25} />
                     <stop offset="100%" stopColor="#a78bfa" stopOpacity={0.02} />
                   </linearGradient>
-                  <linearGradient id="gradMatches" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient id="gradJobs" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#34d399" stopOpacity={0.25} />
                     <stop offset="100%" stopColor="#34d399" stopOpacity={0.02} />
                   </linearGradient>
@@ -299,7 +332,7 @@ export default function Dashboard() {
                   }}
                 />
                 <Area type="monotone" dataKey="resumes" stroke="#a78bfa" strokeWidth={2.5} fill="url(#gradResumes)" />
-                <Area type="monotone" dataKey="matches" stroke="#34d399" strokeWidth={2.5} fill="url(#gradMatches)" />
+                <Area type="monotone" dataKey="jobs" stroke="#34d399" strokeWidth={2.5} fill="url(#gradJobs)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -315,8 +348,8 @@ export default function Dashboard() {
             {[
               { label: 'Resumes Uploaded', value: totalResumes, color: '#a78bfa', icon: <FileUp size={15} /> },
               { label: 'Jobs Created', value: totalJobs, color: '#34d399', icon: <Briefcase size={15} /> },
-              { label: 'Matches Pending', value: '—', color: '#fb7185', icon: <BarChart3 size={15} /> },
-              { label: 'Top Score', value: '—', color: '#38bdf8', icon: <TrendingUp size={15} /> },
+              { label: 'This Week', value: (stats?.this_week_resumes ?? 0) + (stats?.this_week_jobs ?? 0), color: '#fb7185', icon: <BarChart3 size={15} /> },
+              { label: 'Last Week', value: (stats?.prev_week_resumes ?? 0) + (stats?.prev_week_jobs ?? 0), color: '#38bdf8', icon: <TrendingUp size={15} /> },
             ].map((row) => (
               <div
                 key={row.label}

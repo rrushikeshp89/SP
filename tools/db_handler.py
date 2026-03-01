@@ -251,6 +251,85 @@ def delete_job(job_id: str) -> bool:
             return cur.rowcount > 0
 
 
+# ── Dashboard Stats ──────────────────────────────────
+
+def get_dashboard_stats() -> dict:
+    """Return aggregate counts and per-day activity for the dashboard."""
+    with _get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            # Total counts
+            cur.execute("SELECT COUNT(*) AS cnt FROM resumes")
+            total_resumes = cur.fetchone()["cnt"]  # type: ignore[index]
+
+            cur.execute("SELECT COUNT(*) AS cnt FROM jobs")
+            total_jobs = cur.fetchone()["cnt"]  # type: ignore[index]
+
+            # Per-day resume uploads (last 7 days, keyed by day-of-week)
+            cur.execute("""
+                SELECT
+                    TO_CHAR(created_at::timestamptz, 'Dy') AS day,
+                    DATE(created_at::timestamptz)           AS dt,
+                    COUNT(*)                                AS cnt
+                FROM resumes
+                WHERE created_at::timestamptz >= (NOW() - INTERVAL '7 days')
+                GROUP BY day, dt
+                ORDER BY dt
+            """)
+            resume_by_day = {row["day"]: int(row["cnt"]) for row in cur.fetchall()}
+
+            # Per-day job creations (last 7 days)
+            cur.execute("""
+                SELECT
+                    TO_CHAR(created_at::timestamptz, 'Dy') AS day,
+                    DATE(created_at::timestamptz)           AS dt,
+                    COUNT(*)                                AS cnt
+                FROM jobs
+                WHERE created_at::timestamptz >= (NOW() - INTERVAL '7 days')
+                GROUP BY day, dt
+                ORDER BY dt
+            """)
+            jobs_by_day = {row["day"]: int(row["cnt"]) for row in cur.fetchall()}
+
+            # Previous-week resume count (for trend)
+            cur.execute("""
+                SELECT COUNT(*) AS cnt FROM resumes
+                WHERE created_at::timestamptz >= (NOW() - INTERVAL '14 days')
+                  AND created_at::timestamptz <  (NOW() - INTERVAL '7 days')
+            """)
+            prev_week_resumes = cur.fetchone()["cnt"]  # type: ignore[index]
+
+            cur.execute("""
+                SELECT COUNT(*) AS cnt FROM resumes
+                WHERE created_at::timestamptz >= (NOW() - INTERVAL '7 days')
+            """)
+            this_week_resumes = cur.fetchone()["cnt"]  # type: ignore[index]
+
+            # Previous-week job count (for trend)
+            cur.execute("""
+                SELECT COUNT(*) AS cnt FROM jobs
+                WHERE created_at::timestamptz >= (NOW() - INTERVAL '14 days')
+                  AND created_at::timestamptz <  (NOW() - INTERVAL '7 days')
+            """)
+            prev_week_jobs = cur.fetchone()["cnt"]  # type: ignore[index]
+
+            cur.execute("""
+                SELECT COUNT(*) AS cnt FROM jobs
+                WHERE created_at::timestamptz >= (NOW() - INTERVAL '7 days')
+            """)
+            this_week_jobs = cur.fetchone()["cnt"]  # type: ignore[index]
+
+    return {
+        "total_resumes": total_resumes,
+        "total_jobs": total_jobs,
+        "resume_by_day": resume_by_day,
+        "jobs_by_day": jobs_by_day,
+        "this_week_resumes": this_week_resumes,
+        "prev_week_resumes": prev_week_resumes,
+        "this_week_jobs": this_week_jobs,
+        "prev_week_jobs": prev_week_jobs,
+    }
+
+
 # ── Helpers ──────────────────────────────────────────
 
 def _deserialize_row(row: dict) -> dict:

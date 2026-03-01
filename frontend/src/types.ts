@@ -88,3 +88,14 @@ export interface HealthResponse {
   status: string;
   model: string;
 }
+
+export interface DashboardStats {
+  total_resumes: number;
+  total_jobs: number;
+  resume_by_day: Record<string, number>;
+  jobs_by_day: Record<string, number>;
+  this_week_resumes: number;
+  prev_week_resumes: number;
+  this_week_jobs: number;
+  prev_week_jobs: number;
+}

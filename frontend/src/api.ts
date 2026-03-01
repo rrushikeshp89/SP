@@ -7,6 +7,7 @@ import type {
   ScoreResponse,
   BatchScoreResponse,
   HealthResponse,
+  DashboardStats,
 } from './types';
 
 const api = axios.create({
@@ -17,6 +18,10 @@ const api = axios.create({
 /* ── Health ── */
 export const getHealth = () =>
   axios.get<HealthResponse>('/health').then((r) => r.data);
+
+/* ── Dashboard Stats ── */
+export const getStats = () =>
+  api.get<DashboardStats>('/stats').then((r) => r.data);
 
 /* ── Resumes ── */
 export const uploadResume = (file: File, candidateName: string, email?: string, phone?: string) => {

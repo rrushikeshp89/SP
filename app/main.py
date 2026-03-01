@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import EMBEDDING_MODEL
 from app.routers import resumes_router, jobs_router, scoring_router
+from tools.db_handler import get_dashboard_stats
 
 
 @asynccontextmanager
@@ -49,3 +50,10 @@ async def health_check():
         "status": "healthy",
         "model": EMBEDDING_MODEL,
     }
+
+
+# ── Dashboard Stats ──
+@app.get("/api/stats", tags=["System"])
+async def dashboard_stats():
+    """Real-time dashboard statistics."""
+    return get_dashboard_stats()
