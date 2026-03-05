@@ -16,7 +16,7 @@ using a sentence-transformer model. These vectors enable semantic similarity com
 ## 2. Input Contract
 
 | Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
+| --------- | ------ | ---------- | ------------- |
 | `text` | `str` | Yes | Plain text to vectorize (resume or JD) |
 | `model` | `SentenceTransformer \| None` | No | Pre-loaded model instance. If None, loads from config. |
 
@@ -41,7 +41,7 @@ class EmbeddingResult:
 
 ## 4. Processing Pipeline
 
-```
+```text
 Input Text
   │
   ├─ Validate: non-empty after strip()
@@ -79,7 +79,7 @@ def get_model() -> SentenceTransformer:
 ### 5.2 Configuration
 
 | Setting | Source | Default |
-|---------|--------|---------|
+| --------- | -------- | --------- |
 | Model name | `EMBEDDING_MODEL` env var | `all-MiniLM-L6-v2` |
 | Expected dimension | `EMBEDDING_DIM` env var | `384` |
 
@@ -98,7 +98,7 @@ def get_model() -> SentenceTransformer:
 ## 7. Error Scenarios
 
 | Scenario | Response |
-|----------|----------|
+| ---------- | ---------- |
 | Empty text input | `success=False`, `error_message="Input text is empty"` |
 | Model fails to load | `success=False`, `error_message="Model load failed: {detail}"` |
 | Dimension mismatch | `success=False`, `error_message="Dimension mismatch: got {n}, expected {dim}"` |
@@ -118,7 +118,7 @@ def get_model() -> SentenceTransformer:
 ## 9. Test Cases
 
 | # | Input | Expected Output |
-|---|-------|-----------------|
+| --- | ------- | ----------------- |
 | T1 | Short resume text (~100 words) | `success=True`, `dimension=384`, vector is list of floats |
 | T2 | Same text twice | Identical vectors (determinism check) |
 | T3 | Empty string | `success=False`, error about empty text |

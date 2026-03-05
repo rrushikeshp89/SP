@@ -16,7 +16,7 @@ The output text is the foundation for all downstream NLP — embedding, skill ex
 ## 2. Input Contract
 
 | Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
+| --- | --- | --- | --- |
 | `file_path` | `str \| Path` | Yes | Absolute path to the uploaded file in `.tmp/` |
 | `file_format` | `str` | Yes | One of: `pdf`, `docx`, `txt` |
 
@@ -41,7 +41,7 @@ class ExtractionResult:
 
 ## 4. Processing Pipeline
 
-```
+```text
 Input File
   │
   ├─ format == "txt"
@@ -82,7 +82,7 @@ Input File
 ## 6. Error Scenarios
 
 | Scenario | Response |
-|----------|----------|
+| --- | --- |
 | File not found | `success=False`, `error_message="File not found: {path}"` |
 | Unsupported format | `success=False`, `error_message="Unsupported format: {fmt}"` |
 | PDF all methods fail | `success=False`, `method_used="none"`, `error_message="All extraction methods failed"` |
@@ -103,7 +103,7 @@ Input File
 ## 8. Test Cases
 
 | # | Input | Expected Output |
-|---|-------|-----------------|
+| --- | --- | --- |
 | T1 | Valid PDF with text | `success=True`, `method_used="pdfplumber"`, non-empty `raw_text` |
 | T2 | Valid DOCX | `success=True`, `method_used="python-docx"`, non-empty `raw_text` |
 | T3 | Plain TXT (UTF-8) | `success=True`, `method_used="direct"`, exact file contents |

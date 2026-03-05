@@ -70,7 +70,7 @@ $$FitScore = w_1 \cdot S_{semantic} + w_2 \cdot S_{skills} + w_3 \cdot S_{experi
 Default weights from `.env`:
 
 | Component | Weight | Method |
-|-----------|--------|--------|
+| --- | --- | --- |
 | Semantic Similarity | 0.40 | `cosine_similarity(resume_vec, jd_vec) × 100` |
 | Skill Match | 0.35 | See Section 5 |
 | Experience Relevance | 0.15 | See Section 6 |
@@ -80,7 +80,7 @@ Default weights from `.env`:
 
 ## 5. Skill Match Scoring
 
-```
+```text
 For each required_skill in JD:
   1. Exact match (case-insensitive) in resume_skills → full credit (1.0)
   2. Fuzzy match (similarity ≥ 0.85) → partial credit (0.7)
@@ -97,7 +97,7 @@ Preferred skills: add bonus of up to 5 points if candidate has preferred skills
 
 ## 6. Experience Scoring
 
-```
+```text
 If both resume_years and jd_min_years are provided:
   if resume_years >= jd_min_years:
     S_experience = min(100, 80 + (resume_years - jd_min_years) * 4)
@@ -113,7 +113,7 @@ If either is missing:
 
 ## 7. Education Scoring
 
-```
+```text
 degree_levels = {"high_school": 1, "associate": 2, "bachelor": 3, "master": 4, "phd": 5}
 
 Degree level match (50 points):
@@ -134,6 +134,7 @@ If education data missing: S_education = 50 (neutral)
 ## 8. Suggestion Generation
 
 Deterministic rules:
+
 1. For each missing required skill → "Consider gaining experience in {skill}"
 2. If experience is below minimum → "The role requires {n} years; you have {m}"
 3. If education level below requirement → "Consider pursuing a {level} degree"
@@ -164,7 +165,7 @@ Max 5 suggestions, prioritized by impact.
 ## 11. Test Cases
 
 | # | Input | Expected |
-|---|-------|----------|
+| --- | --- | --- |
 | T1 | Identical resume & JD embeddings, all skills match | Score ≈ 100 |
 | T2 | Orthogonal vectors, no skill overlap | Score < 30 |
 | T3 | 50% skill overlap, similar embeddings | Score 50-70 |

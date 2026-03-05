@@ -16,7 +16,7 @@ This layer is **deterministic**: no ML logic, no business rules — only routing
 
 ## 2. Architectural Constraint
 
-```
+```text
 React Frontend → HTTP Request
   → FastAPI Router (validation via Pydantic)
     → Tool function call (text_extractor, vectorizer, scorer, etc.)
@@ -33,7 +33,7 @@ React Frontend → HTTP Request
 ### 3.1 Resume Endpoints (`app/routers/resumes.py`)
 
 | Method | Path | Request | Response | Tool Calls |
-|--------|------|---------|----------|------------|
+| -------- | ------ | --------- | ---------- | ------------ |
 | POST | `/api/resumes/upload` | `UploadFile` + metadata | `ResumeResponse` | `text_extractor` → `vectorizer` → `skill_extractor` → `db_handler.save_resume` |
 | GET | `/api/resumes/{id}` | Path param UUID | `ResumeResponse` | `db_handler.get_resume` |
 | GET | `/api/resumes` | Query: `page`, `per_page` | `PaginatedResumes` | `db_handler.list_resumes` |
@@ -41,7 +41,7 @@ React Frontend → HTTP Request
 ### 3.2 Job Description Endpoints (`app/routers/jobs.py`)
 
 | Method | Path | Request | Response | Tool Calls |
-|--------|------|---------|----------|------------|
+| -------- | ------ | --------- | ---------- | ------------ |
 | POST | `/api/jobs` | `JobCreateRequest` JSON | `JobResponse` | `vectorizer` → `skill_extractor` → `db_handler.save_job` |
 | GET | `/api/jobs/{id}` | Path param UUID | `JobResponse` | `db_handler.get_job` |
 | GET | `/api/jobs` | Query: `page`, `per_page` | `PaginatedJobs` | `db_handler.list_jobs` |
@@ -49,7 +49,7 @@ React Frontend → HTTP Request
 ### 3.3 Scoring Endpoints (`app/routers/scoring.py`)
 
 | Method | Path | Request | Response | Tool Calls |
-|--------|------|---------|----------|------------|
+| -------- | ------ | --------- | ---------- | ------------ |
 | POST | `/api/score` | `ScoreRequest` (resume_id, jd_id) | `ScoreResponse` | `db_handler.get_resume` → `db_handler.get_job` → `scorer.compute_score` → `db_handler.save_score` |
 | POST | `/api/score/batch` | `BatchScoreRequest` (jd_id) | `BatchScoreResponse` | For each resume: `scorer.compute_score` → sort → rank |
 | GET | `/api/score/{score_id}` | Path param UUID | `ScoreResponse` | `db_handler.get_score` |
@@ -183,7 +183,7 @@ class BatchScoreResponse(BaseModel):
 
 ## 5. Request Flow (POST `/api/resumes/upload`)
 
-```
+```text
 1. Receive UploadFile + ResumeUploadMeta via multipart form
 2. Validate file format (pdf|docx|txt) — reject 422 if unsupported
 3. Save file to .tmp/{uuid}.{ext}
@@ -203,7 +203,7 @@ class BatchScoreResponse(BaseModel):
 ## 6. Error Handling
 
 | HTTP Code | Condition |
-|-----------|-----------|
+| ----------- | ----------- |
 | 201 | Resource created successfully |
 | 200 | Resource retrieved successfully |
 | 400 | Invalid request body |
@@ -213,6 +213,7 @@ class BatchScoreResponse(BaseModel):
 | 503 | ML model or database unavailable |
 
 All errors return:
+
 ```json
 {"detail": "Human-readable error message"}
 ```

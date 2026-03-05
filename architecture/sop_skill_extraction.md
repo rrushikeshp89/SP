@@ -16,7 +16,7 @@ using a curated taxonomy with fuzzy matching. This is deterministic — no LLM i
 ## 2. Input Contract
 
 | Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
+| --- | --- | --- | --- |
 | `text` | `str` | Yes | Plain text to extract skills from |
 | `taxonomy_path` | `str \| Path \| None` | No | Path to skill taxonomy JSON. Defaults to `tools/data/skill_taxonomy.json` |
 
@@ -126,7 +126,7 @@ File: `tools/data/skill_taxonomy.json`
 
 ## 5. Matching Algorithm
 
-```
+```text
 1. Load taxonomy (cached after first load)
 2. Lowercase the input text
 3. Tokenize into words and bigrams/trigrams for multi-word skill matching
@@ -143,6 +143,7 @@ File: `tools/data/skill_taxonomy.json`
 ### Word Boundary Matching
 
 Use regex `\b{alias}\b` (case-insensitive) to avoid false positives:
+
 - "Java" should NOT match "JavaScript"
 - "R" uses special pattern `\bR\b` with context checks
 - "Go" uses `\bGo\b` with context checks (avoid matching "go to")
@@ -163,7 +164,7 @@ Use regex `\b{alias}\b` (case-insensitive) to avoid false positives:
 ## 7. Error Scenarios
 
 | Scenario | Response |
-|----------|----------|
+| --- | --- |
 | Empty text | `success=True`, `skills=[]`, `total_count=0` |
 | Taxonomy file not found | `success=False`, `error_message="Taxonomy not found: {path}"` |
 | Invalid taxonomy JSON | `success=False`, `error_message="Invalid taxonomy: {detail}"` |
@@ -180,7 +181,7 @@ Use regex `\b{alias}\b` (case-insensitive) to avoid false positives:
 ## 9. Test Cases
 
 | # | Input Text | Expected Skills (subset) |
-|---|-----------|------------------------|
+| --- | --- | --- |
 | T1 | "5 years of Python and FastAPI experience" | Python, FastAPI |
 | T2 | "JavaScript/TypeScript React developer" | JavaScript, TypeScript, React |
 | T3 | "AWS certified, Docker and Kubernetes" | AWS, Docker, Kubernetes |
