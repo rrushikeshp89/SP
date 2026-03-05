@@ -6,12 +6,16 @@ import {
   Briefcase,
   BarChart3,
   Trophy,
+  Kanban,
+  EyeOff,
+  Eye,
   Sun,
   Moon,
   X,
   Command,
 } from 'lucide-react';
 import { useTheme } from '../ThemeContext';
+import { useBlindMode } from '../BlindModeContext';
 
 const NAV_ITEMS = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -19,6 +23,7 @@ const NAV_ITEMS = [
   { to: '/jobs', icon: Briefcase, label: 'Jobs' },
   { to: '/match', icon: BarChart3, label: 'Match' },
   { to: '/rankings', icon: Trophy, label: 'Rankings' },
+  { to: '/pipeline', icon: Kanban, label: 'Pipeline' },
 ];
 
 interface SidebarProps {
@@ -28,6 +33,7 @@ interface SidebarProps {
 
 export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
   const { theme, toggle } = useTheme();
+  const { blind, toggle: toggleBlind } = useBlindMode();
   const location = useLocation();
 
   const sidebarContent = (
@@ -189,6 +195,25 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
 
       {/* Footer */}
       <div className="px-4 pb-6 flex flex-col gap-2">
+        {/* Blind mode toggle */}
+        <button
+          onClick={toggleBlind}
+          className="flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-colors"
+          style={{
+            border: 'none',
+            background: blind ? 'var(--bg-sidebar-active)' : 'transparent',
+            cursor: 'pointer',
+            color: blind ? 'var(--color-brand-300)' : 'var(--text-secondary)',
+          }}
+          onMouseEnter={(e) => { if (!blind) e.currentTarget.style.background = 'var(--bg-sidebar-hover)'; }}
+          onMouseLeave={(e) => { if (!blind) e.currentTarget.style.background = 'transparent'; }}
+        >
+          {blind ? <EyeOff size={17} /> : <Eye size={17} />}
+          <span className="text-sm font-medium">
+            {blind ? 'Blind Mode On' : 'Blind Mode'}
+          </span>
+        </button>
+
         {/* Theme toggle */}
         <button
           onClick={toggle}

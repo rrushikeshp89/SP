@@ -1,5 +1,8 @@
 /* ── API Response Types ── */
 
+export const VALID_STATUSES = ['new', 'screening', 'interview', 'offered', 'hired', 'rejected'] as const;
+export type CandidateStatus = typeof VALID_STATUSES[number];
+
 export interface Resume {
   resume_id: string;
   candidate_name: string;
@@ -12,6 +15,8 @@ export interface Resume {
     [key: string]: unknown;
   };
   skills: string[];
+  status: CandidateStatus;
+  notes: string;
   created_at: string;
   updated_at: string;
 }
@@ -60,6 +65,13 @@ export interface ScoreBreakdown {
   education: ComponentScore;
 }
 
+export interface GapItem {
+  category: string;
+  item: string;
+  impact: string;
+  recommendation: string;
+}
+
 export interface ScoreResponse {
   overall_score: number;
   breakdown: ScoreBreakdown;
@@ -67,6 +79,8 @@ export interface ScoreResponse {
   missing_skills: string[];
   partially_matched: { required: string; has: string; similarity: number }[];
   suggestions: string[];
+  explanation: string;
+  gap_report: GapItem[];
 }
 
 export interface RankedCandidate {
@@ -75,13 +89,69 @@ export interface RankedCandidate {
   candidate_name: string;
   overall_score: number;
   breakdown: ScoreBreakdown;
+  matched_skills: string[];
+  missing_skills: string[];
   suggestions: string[];
+  explanation: string;
+  gap_report: GapItem[];
 }
 
 export interface BatchScoreResponse {
   job_id: string;
   total_candidates: number;
   ranked_candidates: RankedCandidate[];
+}
+
+export interface ScoreHistoryItem {
+  id: number;
+  resume_id: string;
+  job_id: string;
+  candidate_name: string;
+  job_title: string;
+  overall_score: number;
+  breakdown: ScoreBreakdown;
+  matched_skills: string[];
+  missing_skills: string[];
+  explanation: string;
+  gap_report: GapItem[];
+  scored_at: string;
+}
+
+export interface ScoringProfile {
+  profile_id: string;
+  name: string;
+  description: string;
+  weights: { semantic: number; skills: number; experience: number; education: number };
+  is_default: boolean;
+}
+
+export interface PipelineCandidate {
+  resume_id: string;
+  candidate_name: string;
+  email: string | null;
+  status: CandidateStatus;
+  skills: string[];
+  notes: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PipelineStage {
+  stage: CandidateStatus;
+  count: number;
+  candidates: PipelineCandidate[];
+}
+
+export interface PipelineResponse {
+  stages: PipelineStage[];
+  total: number;
+}
+
+export interface BulkUploadResult {
+  uploaded: number;
+  failed: number;
+  results: { resume_id: string; candidate_name: string; skills_count: number }[];
+  errors: { index: number; filename?: string; error: string }[];
 }
 
 export interface HealthResponse {

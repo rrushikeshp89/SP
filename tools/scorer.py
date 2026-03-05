@@ -53,18 +53,26 @@ DEGREE_LEVELS = {
 
 # ── Public API ───────────────────────────────────────
 
-def compute_fit_score(resume: dict, job: dict) -> dict:
+def compute_fit_score(resume: dict, job: dict, custom_weights: dict | None = None) -> dict:
     """
     Compute the fit score between a resume and a job description.
 
     Args:
         resume: Resume record dict (must have embedding_vector, skills, etc.)
         job: Job record dict (must have embedding_vector, required_skills, etc.)
+        custom_weights: Optional dict with keys semantic/skills/experience/education.
 
     Returns:
-        Dict with fit_score, breakdown, matched_skills, missing_skills, suggestions.
+        Dict with fit_score, breakdown, matched_skills, missing_skills,
+        suggestions, explanation, gap_report.
     """
     start = time.perf_counter()
+
+    # Use custom weights if provided, else defaults
+    w_semantic = custom_weights.get("semantic", WEIGHT_SEMANTIC) if custom_weights else WEIGHT_SEMANTIC
+    w_skills = custom_weights.get("skills", WEIGHT_SKILLS) if custom_weights else WEIGHT_SKILLS
+    w_experience = custom_weights.get("experience", WEIGHT_EXPERIENCE) if custom_weights else WEIGHT_EXPERIENCE
+    w_education = custom_weights.get("education", WEIGHT_EDUCATION) if custom_weights else WEIGHT_EDUCATION
 
     resume_vec = resume.get("embedding_vector", [])
     jd_vec = job.get("embedding_vector", [])
@@ -81,8 +89,8 @@ def compute_fit_score(resume: dict, job: dict) -> dict:
     sem_score = _semantic_score(resume_vec, jd_vec)
     semantic = ComponentScore(
         score=sem_score,
-        weight=WEIGHT_SEMANTIC,
-        weighted_score=round(sem_score * WEIGHT_SEMANTIC, 2),
+        weight=w_semantic,
+        weighted_score=round(sem_score * w_semantic, 2),
     )
 
     # ── 2. Skill Match ──
@@ -92,24 +100,24 @@ def compute_fit_score(resume: dict, job: dict) -> dict:
 
     skills_comp = ComponentScore(
         score=skills_score,
-        weight=WEIGHT_SKILLS,
-        weighted_score=round(skills_score * WEIGHT_SKILLS, 2),
+        weight=w_skills,
+        weighted_score=round(skills_score * w_skills, 2),
     )
 
     # ── 3. Experience ──
     exp_score = _experience_score(resume_exp_years, jd_min_exp)
     experience = ComponentScore(
         score=exp_score,
-        weight=WEIGHT_EXPERIENCE,
-        weighted_score=round(exp_score * WEIGHT_EXPERIENCE, 2),
+        weight=w_experience,
+        weighted_score=round(exp_score * w_experience, 2),
     )
 
     # ── 4. Education ──
     edu_score = _education_score(resume_edu, jd_edu)
     education = ComponentScore(
         score=edu_score,
-        weight=WEIGHT_EDUCATION,
-        weighted_score=round(edu_score * WEIGHT_EDUCATION, 2),
+        weight=w_education,
+        weighted_score=round(edu_score * w_education, 2),
     )
 
     # ── Final Score ──
@@ -129,7 +137,7 @@ def compute_fit_score(resume: dict, job: dict) -> dict:
 
     elapsed = round((time.perf_counter() - start) * 1000, 2)
 
-    return {
+    result = {
         "fit_score": fit_score,
         "breakdown": {
             "semantic": {"score": semantic.score, "weight": semantic.weight, "weighted_score": semantic.weighted_score},
@@ -143,6 +151,12 @@ def compute_fit_score(resume: dict, job: dict) -> dict:
         "suggestions": suggestions,
         "processing_time_ms": elapsed,
     }
+
+    # Generate natural-language explanation and gap report
+    result["explanation"] = generate_explanation(result, resume, job)
+    result["gap_report"] = generate_gap_report(result, resume, job)
+
+    return result
 
 
 # ── Component Scorers ────────────────────────────────
@@ -334,3 +348,125 @@ def _generate_suggestions(
         suggestions.append(f"Strong match — highlight your skills in {top}")
 
     return suggestions[:5]
+
+
+# ── Natural Language Explanation ─────────────────────
+
+def generate_explanation(result: dict, resume: dict, job: dict) -> str:
+    """Generate a 2-3 sentence human-readable score explanation."""
+    score = result["fit_score"]
+    matched = result.get("matched_skills", [])
+    missing = result.get("missing_skills", [])
+    breakdown = result["breakdown"]
+
+    # Strength qualifier
+    if score >= 85:
+        strength = "an excellent"
+    elif score >= 70:
+        strength = "a strong"
+    elif score >= 55:
+        strength = "a moderate"
+    elif score >= 40:
+        strength = "a fair"
+    else:
+        strength = "a weak"
+
+    candidate = resume.get("candidate_name", "This candidate")
+    job_title = job.get("title", "this position")
+
+    parts = [f"{candidate} is {strength} match for {job_title} with an overall fit score of {score}%."]
+
+    # Skills insight
+    if matched:
+        top_skills = matched[:5]
+        parts.append(f"Key matching skills include {', '.join(top_skills)}.")
+
+    # Best and weakest component
+    components = {
+        "Semantic relevance": breakdown["semantic"]["score"],
+        "Skills alignment": breakdown["skills"]["score"],
+        "Experience level": breakdown["experience"]["score"],
+        "Education fit": breakdown["education"]["score"],
+    }
+    best_name = max(components, key=lambda k: components[k])
+    best_val = components[best_name]
+    worst_name = min(components, key=lambda k: components[k])
+    worst_val = components[worst_name]
+
+    if best_val > 75:
+        parts.append(f"{best_name} is particularly strong at {best_val:.0f}%.")
+    if worst_val < 40 and missing:
+        gap_items = ", ".join(missing[:3])
+        parts.append(f"Primary gaps: {gap_items}.")
+    elif missing:
+        parts.append(f"{worst_name} could be improved ({worst_val:.0f}%).")
+
+    return " ".join(parts)
+
+
+# ── Skill Gap Report ─────────────────────────────────
+
+def generate_gap_report(result: dict, resume: dict, job: dict) -> list[dict]:
+    """Generate actionable gap analysis items."""
+    gaps: list[dict] = []
+
+    # Skill gaps
+    for skill in result.get("missing_skills", []):
+        gaps.append({
+            "category": "skill",
+            "item": skill,
+            "impact": "high",
+            "recommendation": f"Acquire {skill} through certification or project experience",
+        })
+
+    # Partial match gaps
+    for pm in result.get("partially_matched", []):
+        if pm.get("similarity", 0) < 0.8:
+            gaps.append({
+                "category": "skill",
+                "item": pm["required"],
+                "impact": "medium",
+                "recommendation": f"Strengthen {pm['required']} — has related skill '{pm['has']}'",
+            })
+
+    # Experience gap
+    resume_exp = resume.get("experience_years")
+    job_exp = job.get("experience_years")
+    if resume_exp is not None and job_exp is not None and resume_exp < job_exp:
+        gap_years = job_exp - resume_exp
+        gaps.append({
+            "category": "experience",
+            "item": f"{gap_years:.0f} more year{'s' if gap_years != 1 else ''}",
+            "impact": "medium",
+            "recommendation": f"Candidate has {resume_exp:.0f}yr experience; role requires {job_exp:.0f}yr",
+        })
+
+    # Education gap
+    resume_edu = resume.get("education")
+    job_edu = job.get("education")
+    if resume_edu and job_edu:
+        r_level = DEGREE_LEVELS.get(str(resume_edu.get("degree", "")).lower(), 0)
+        j_level = DEGREE_LEVELS.get(
+            str(job_edu.get("degree_level", job_edu.get("degree", ""))).lower(), 0
+        )
+        if 0 < r_level < j_level:
+            target = next((k for k, v in DEGREE_LEVELS.items() if v == j_level), "higher degree")
+            gaps.append({
+                "category": "education",
+                "item": f"{target} degree",
+                "impact": "low",
+                "recommendation": f"Role prefers a {target} degree; candidate has a lower qualification",
+            })
+
+    # Score improvement estimate
+    current = result["fit_score"]
+    if gaps and current < 90:
+        potential = min(95, current + len(gaps) * 3)
+        gaps.insert(0, {
+            "category": "summary",
+            "item": f"Potential: {current}% → {potential}%",
+            "impact": "info",
+            "recommendation": f"Closing {len(gaps) - 1} gap{'s' if len(gaps) > 2 else ''} could raise the score to ~{potential}%",
+        })
+
+    return gaps

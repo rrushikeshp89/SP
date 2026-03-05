@@ -8,6 +8,20 @@ import json
 from contextlib import contextmanager
 from typing import Any, Generator
 
+import numpy as np
+
+
+class _NumpyEncoder(json.JSONEncoder):
+    """Handle numpy scalars / arrays when persisting to JSON columns."""
+    def default(self, o: Any) -> Any:
+        if isinstance(o, (np.floating,)):
+            return float(o)
+        if isinstance(o, (np.integer,)):
+            return int(o)
+        if isinstance(o, np.ndarray):
+            return o.tolist()
+        return super().default(o)
+
 import psycopg2  # type: ignore[import-untyped]
 import psycopg2.pool  # type: ignore[import-untyped]
 import psycopg2.extras  # type: ignore[import-untyped]
@@ -56,7 +70,7 @@ def _get_conn() -> Generator:
 # ── Schema Init ──────────────────────────────────────
 
 def init_tables() -> None:
-    """Create tables if they don't exist."""
+    """Create tables if they don't exist, and migrate existing schemas."""
     with _get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute("""
@@ -70,6 +84,8 @@ def init_tables() -> None:
                     parsed_sections JSONB DEFAULT '{}',
                     skills          JSONB DEFAULT '[]',
                     embedding_vector JSONB,
+                    status          TEXT NOT NULL DEFAULT 'new',
+                    notes           TEXT NOT NULL DEFAULT '',
                     created_at      TEXT,
                     updated_at      TEXT
                 );
@@ -88,6 +104,46 @@ def init_tables() -> None:
                     updated_at          TEXT
                 );
             """)
+            # -- Migrations for existing databases --
+            cur.execute("""
+                DO $$ BEGIN
+                    ALTER TABLE resumes ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'new';
+                    ALTER TABLE resumes ADD COLUMN IF NOT EXISTS notes TEXT NOT NULL DEFAULT '';
+                EXCEPTION WHEN others THEN NULL;
+                END $$;
+            """)
+            # Score history
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS score_history (
+                    id              SERIAL PRIMARY KEY,
+                    resume_id       TEXT NOT NULL REFERENCES resumes(resume_id) ON DELETE CASCADE,
+                    job_id          TEXT NOT NULL REFERENCES jobs(job_id) ON DELETE CASCADE,
+                    overall_score   REAL NOT NULL,
+                    breakdown       JSONB NOT NULL DEFAULT '{}',
+                    matched_skills  JSONB DEFAULT '[]',
+                    missing_skills  JSONB DEFAULT '[]',
+                    explanation     TEXT DEFAULT '',
+                    gap_report      JSONB DEFAULT '[]',
+                    scored_at       TEXT NOT NULL
+                );
+            """)
+            # Scoring profiles
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS scoring_profiles (
+                    profile_id      TEXT PRIMARY KEY,
+                    name            TEXT NOT NULL,
+                    description     TEXT DEFAULT '',
+                    weights         JSONB NOT NULL,
+                    is_default      BOOLEAN DEFAULT FALSE,
+                    created_at      TEXT NOT NULL,
+                    updated_at      TEXT NOT NULL
+                );
+            """)
+            # Indexes
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_resumes_status ON resumes (status);")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_score_history_resume ON score_history (resume_id);")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_score_history_job ON score_history (job_id);")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_score_history_scored ON score_history (scored_at DESC);")
 
 
 # ── Resume CRUD ──────────────────────────────────────
@@ -101,8 +157,8 @@ def save_resume(data: dict[str, Any]) -> None:
                 INSERT INTO resumes
                     (resume_id, candidate_name, email, phone, source_format,
                      raw_text, parsed_sections, skills, embedding_vector,
-                     created_at, updated_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                     status, notes, created_at, updated_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (resume_id) DO UPDATE SET
                     candidate_name = EXCLUDED.candidate_name,
                     email = EXCLUDED.email,
@@ -111,6 +167,8 @@ def save_resume(data: dict[str, Any]) -> None:
                     parsed_sections = EXCLUDED.parsed_sections,
                     skills = EXCLUDED.skills,
                     embedding_vector = EXCLUDED.embedding_vector,
+                    status = EXCLUDED.status,
+                    notes = EXCLUDED.notes,
                     updated_at = EXCLUDED.updated_at
                 """,
                 (
@@ -123,6 +181,8 @@ def save_resume(data: dict[str, Any]) -> None:
                     json.dumps(data.get("parsed_sections", {})),
                     json.dumps(data.get("skills", [])),
                     json.dumps(data.get("embedding_vector")),
+                    data.get("status", "new"),
+                    data.get("notes", ""),
                     data.get("created_at"),
                     data.get("updated_at"),
                 ),
@@ -334,7 +394,8 @@ def get_dashboard_stats() -> dict:
 
 def _deserialize_row(row: dict) -> dict:
     """Parse JSON columns back to Python objects."""
-    for key in ("parsed_sections", "skills", "embedding_vector", "required_skills", "education"):
+    for key in ("parsed_sections", "skills", "embedding_vector", "required_skills", "education",
+                "breakdown", "matched_skills", "missing_skills", "gap_report", "weights"):
         val = row.get(key)
         if isinstance(val, str):
             try:
@@ -342,3 +403,167 @@ def _deserialize_row(row: dict) -> dict:
             except (json.JSONDecodeError, TypeError):
                 pass
     return row
+
+
+# ── Resume Status / Notes ────────────────────────────
+
+def update_resume_meta(resume_id: str, status: str | None = None, notes: str | None = None) -> bool:
+    """Update resume status and/or notes. Returns True if row existed."""
+    sets: list[str] = []
+    vals: list[Any] = []
+    if status is not None:
+        sets.append("status = %s")
+        vals.append(status)
+    if notes is not None:
+        sets.append("notes = %s")
+        vals.append(notes)
+    if not sets:
+        return False
+    from datetime import datetime, timezone
+    sets.append("updated_at = %s")
+    vals.append(datetime.now(timezone.utc).isoformat())
+    vals.append(resume_id)
+    with _get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                f"UPDATE resumes SET {', '.join(sets)} WHERE resume_id = %s",
+                tuple(vals),
+            )
+            return cur.rowcount > 0
+
+
+# ── Score History ────────────────────────────────────
+
+def save_score_record(data: dict[str, Any]) -> None:
+    """Persist a score computation to history."""
+    with _get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO score_history
+                    (resume_id, job_id, overall_score, breakdown,
+                     matched_skills, missing_skills, explanation, gap_report, scored_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """,
+                (
+                    data["resume_id"],
+                    data["job_id"],
+                    float(data["overall_score"]),
+                    json.dumps(data.get("breakdown", {}), cls=_NumpyEncoder),
+                    json.dumps(data.get("matched_skills", []), cls=_NumpyEncoder),
+                    json.dumps(data.get("missing_skills", []), cls=_NumpyEncoder),
+                    data.get("explanation", ""),
+                    json.dumps(data.get("gap_report", []), cls=_NumpyEncoder),
+                    data["scored_at"],
+                ),
+            )
+
+
+def get_score_history(resume_id: str | None = None, job_id: str | None = None, limit: int = 50) -> list[dict]:
+    """Fetch score history, optionally filtered by resume or job."""
+    with _get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            clauses: list[str] = []
+            vals: list[Any] = []
+            if resume_id:
+                clauses.append("resume_id = %s")
+                vals.append(resume_id)
+            if job_id:
+                clauses.append("job_id = %s")
+                vals.append(job_id)
+            where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
+            vals.append(limit)
+            cur.execute(
+                f"""
+                SELECT sh.*, r.candidate_name, j.title AS job_title
+                FROM score_history sh
+                JOIN resumes r ON r.resume_id = sh.resume_id
+                JOIN jobs j ON j.job_id = sh.job_id
+                {where}
+                ORDER BY sh.scored_at DESC
+                LIMIT %s
+                """,
+                tuple(vals),
+            )
+            return [_deserialize_row(dict(r)) for r in cur.fetchall()]
+
+
+# ── Scoring Profiles ─────────────────────────────────
+
+def save_scoring_profile(data: dict[str, Any]) -> None:
+    """Upsert a scoring profile."""
+    with _get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO scoring_profiles
+                    (profile_id, name, description, weights, is_default, created_at, updated_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (profile_id) DO UPDATE SET
+                    name = EXCLUDED.name,
+                    description = EXCLUDED.description,
+                    weights = EXCLUDED.weights,
+                    is_default = EXCLUDED.is_default,
+                    updated_at = EXCLUDED.updated_at
+                """,
+                (
+                    data["profile_id"],
+                    data["name"],
+                    data.get("description", ""),
+                    json.dumps(data["weights"]),
+                    data.get("is_default", False),
+                    data["created_at"],
+                    data["updated_at"],
+                ),
+            )
+
+
+def list_scoring_profiles() -> list[dict]:
+    """Return all scoring profiles."""
+    with _get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("SELECT * FROM scoring_profiles ORDER BY created_at DESC")
+            return [_deserialize_row(dict(r)) for r in cur.fetchall()]
+
+
+def get_scoring_profile(profile_id: str) -> dict[str, Any] | None:
+    """Fetch a single scoring profile."""
+    with _get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("SELECT * FROM scoring_profiles WHERE profile_id = %s", (profile_id,))
+            row = cur.fetchone()
+            return _deserialize_row(dict(row)) if row else None
+
+
+def delete_scoring_profile(profile_id: str) -> bool:
+    """Delete a scoring profile. Returns True if deleted."""
+    with _get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM scoring_profiles WHERE profile_id = %s", (profile_id,))
+            return cur.rowcount > 0
+
+
+# ── Pipeline Data ────────────────────────────────────
+
+PIPELINE_STAGES = ["new", "screening", "interview", "offered", "hired", "rejected"]
+
+
+def get_pipeline_data() -> dict[str, list[dict]]:
+    """Return resumes grouped by pipeline status."""
+    with _get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("""
+                SELECT resume_id, candidate_name, email, status, skills,
+                       created_at, updated_at, notes
+                FROM resumes
+                ORDER BY updated_at DESC
+            """)
+            rows = [_deserialize_row(dict(r)) for r in cur.fetchall()]
+
+    grouped: dict[str, list[dict]] = {s: [] for s in PIPELINE_STAGES}
+    for r in rows:
+        stage = r.get("status", "new")
+        if stage not in grouped:
+            stage = "new"
+        grouped[stage].append(r)
+    return grouped

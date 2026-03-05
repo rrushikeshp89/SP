@@ -11,17 +11,31 @@ import {
   Loader2,
   FileUp,
   Trash2,
+  StickyNote,
+  Files,
 } from 'lucide-react';
-import { uploadResume, listResumes, deleteResume } from '../api';
+import { uploadResume, listResumes, deleteResume, updateResumeMeta, uploadBulk } from '../api';
 import SkillBadge from '../components/SkillBadge';
 import EmptyState from '../components/EmptyState';
 import PageHeader from '../components/PageHeader';
 import ConfirmModal from '../components/ConfirmModal';
 import { useToast } from '../components/Toast';
-import type { Resume } from '../types';
+import { useBlindMode } from '../BlindModeContext';
+import type { Resume, CandidateStatus } from '../types';
+import { VALID_STATUSES } from '../types';
+
+const STATUS_COLORS: Record<CandidateStatus, string> = {
+  new: '#7c3aed',
+  screening: '#f59e0b',
+  interview: '#3b82f6',
+  offered: '#06b6d4',
+  hired: '#10b981',
+  rejected: '#ef4444',
+};
 
 export default function Resumes() {
   const toast = useToast();
+  const { mask } = useBlindMode();
   /* ── Upload State ── */
   const [file, setFile] = useState<File | null>(null);
   const [name, setName] = useState('');
@@ -29,11 +43,18 @@ export default function Resumes() {
   const [phone, setPhone] = useState('');
   const [uploading, setUploading] = useState(false);
 
+  /* ── Bulk Upload ── */
+  const [bulkFiles, setBulkFiles] = useState<File[]>([]);
+  const [bulkUploading, setBulkUploading] = useState(false);
+
   /* ── List State ── */
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  /* ── Notes editing ── */
+  const [editingNotes, setEditingNotes] = useState<Record<string, string>>({});
 
   /* ── Delete State ── */
   const [deleteTarget, setDeleteTarget] = useState<Resume | null>(null);
@@ -76,6 +97,47 @@ export default function Resumes() {
       }
     }
   }, [name]);
+
+  /* ── Bulk Upload Handler ── */
+  const handleBulkUpload = async () => {
+    if (bulkFiles.length === 0) return;
+    setBulkUploading(true);
+    try {
+      const result = await uploadBulk(bulkFiles);
+      toast.success(
+        'Bulk upload complete',
+        `${result.uploaded} uploaded, ${result.failed} failed`,
+      );
+      setBulkFiles([]);
+      fetchResumes();
+    } catch (err: any) {
+      toast.error('Bulk upload failed', err?.response?.data?.detail || 'Try again.');
+    } finally {
+      setBulkUploading(false);
+    }
+  };
+
+  /* ── Status/Notes Handlers ── */
+  const handleStatusChange = async (resumeId: string, status: CandidateStatus) => {
+    try {
+      const updated = await updateResumeMeta(resumeId, { status });
+      setResumes((prev) => prev.map((r) => (r.resume_id === resumeId ? { ...r, ...updated } : r)));
+    } catch {
+      toast.error('Update failed', 'Could not change status.');
+    }
+  };
+
+  const handleNotesSave = async (resumeId: string) => {
+    const notes = editingNotes[resumeId];
+    if (notes === undefined) return;
+    try {
+      await updateResumeMeta(resumeId, { notes });
+      setResumes((prev) => prev.map((r) => (r.resume_id === resumeId ? { ...r, notes } : r)));
+      toast.success('Notes saved');
+    } catch {
+      toast.error('Update failed', 'Could not save notes.');
+    }
+  };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -247,6 +309,59 @@ export default function Resumes() {
                 </>
               )}
             </motion.button>
+
+            {/* ── Bulk Upload Section ── */}
+            <div className="mt-6 pt-5" style={{ borderTop: '1px solid var(--border-light)' }}>
+              <h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+                <Files size={15} /> Bulk Upload
+              </h3>
+              <div
+                className="rounded-xl border-2 border-dashed p-4 text-center cursor-pointer transition-all"
+                style={{
+                  borderColor: 'var(--border-light)',
+                  background: 'var(--bg-tertiary)',
+                }}
+                onClick={() => {
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.multiple = true;
+                  input.accept = '.pdf,.docx,.txt';
+                  input.onchange = () => {
+                    if (input.files) setBulkFiles(Array.from(input.files));
+                  };
+                  input.click();
+                }}
+              >
+                {bulkFiles.length > 0 ? (
+                  <p className="text-sm" style={{ color: 'var(--text-primary)' }}>
+                    {bulkFiles.length} file{bulkFiles.length > 1 ? 's' : ''} selected
+                  </p>
+                ) : (
+                  <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                    Click to select multiple files
+                  </p>
+                )}
+              </div>
+              {bulkFiles.length > 0 && (
+                <motion.button
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleBulkUpload}
+                  disabled={bulkUploading}
+                  className="btn-brand mt-3 w-full justify-center"
+                >
+                  {bulkUploading ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" /> Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Upload size={16} /> Upload {bulkFiles.length} Files
+                    </>
+                  )}
+                </motion.button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -329,9 +444,20 @@ export default function Resumes() {
                           .toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
-                          {r.candidate_name}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+                            {mask(r.candidate_name, i)}
+                          </p>
+                          <span
+                            className="text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase shrink-0"
+                            style={{
+                              background: `${STATUS_COLORS[r.status as CandidateStatus] || '#7c3aed'}18`,
+                              color: STATUS_COLORS[r.status as CandidateStatus] || '#7c3aed',
+                            }}
+                          >
+                            {r.status || 'new'}
+                          </span>
+                        </div>
                         <p className="text-xs truncate" style={{ color: 'var(--text-tertiary)' }}>
                           {r.email || 'No email'} &middot; {r.source_format.toUpperCase()} &middot;{' '}
                           {new Date(r.created_at).toLocaleDateString()}
@@ -388,6 +514,67 @@ export default function Resumes() {
                               {r.raw_text.slice(0, 800)}
                               {r.raw_text.length > 800 && '...'}
                             </p>
+
+                            {/* Status & Notes */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                              <div>
+                                <label className="text-xs font-semibold mb-1 block" style={{ color: 'var(--text-secondary)' }}>
+                                  Status
+                                </label>
+                                <select
+                                  value={r.status || 'new'}
+                                  onChange={(e) => handleStatusChange(r.resume_id, e.target.value as CandidateStatus)}
+                                  className="w-full px-3 py-2 text-sm rounded-lg border outline-none"
+                                  style={{
+                                    background: 'var(--bg-input)',
+                                    borderColor: 'var(--border-light)',
+                                    color: 'var(--text-primary)',
+                                  }}
+                                >
+                                  {VALID_STATUSES.map((s) => (
+                                    <option key={s} value={s}>
+                                      {s.charAt(0).toUpperCase() + s.slice(1)}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div>
+                                <label className="text-xs font-semibold mb-1 flex items-center gap-1" style={{ color: 'var(--text-secondary)' }}>
+                                  <StickyNote size={12} /> Notes
+                                </label>
+                                <div className="flex gap-2">
+                                  <textarea
+                                    rows={2}
+                                    value={editingNotes[r.resume_id] ?? r.notes}
+                                    onChange={(e) =>
+                                      setEditingNotes((prev) => ({ ...prev, [r.resume_id]: e.target.value }))
+                                    }
+                                    placeholder="Add notes about this candidate..."
+                                    className="flex-1 px-3 py-2 text-xs rounded-lg border outline-none resize-none"
+                                    style={{
+                                      background: 'var(--bg-input)',
+                                      borderColor: 'var(--border-light)',
+                                      color: 'var(--text-primary)',
+                                    }}
+                                  />
+                                  {editingNotes[r.resume_id] !== undefined &&
+                                    editingNotes[r.resume_id] !== r.notes && (
+                                      <button
+                                        onClick={() => handleNotesSave(r.resume_id)}
+                                        className="text-xs px-3 py-1 rounded-lg font-medium shrink-0 self-end"
+                                        style={{
+                                          background: 'var(--color-brand-500)',
+                                          color: '#fff',
+                                          border: 'none',
+                                          cursor: 'pointer',
+                                        }}
+                                      >
+                                        Save
+                                      </button>
+                                    )}
+                                </div>
+                              </div>
+                            </div>
 
                             {/* Delete button */}
                             <div className="mt-4 flex justify-end">

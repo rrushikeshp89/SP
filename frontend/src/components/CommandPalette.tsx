@@ -70,6 +70,14 @@ export default function CommandPalette() {
       keywords: ['rank', 'leaderboard', 'top'],
     },
     {
+      id: 'nav-pipeline',
+      label: 'Go to Pipeline',
+      section: 'Navigation',
+      icon: <BarChart3 size={16} />,
+      action: () => navigate('/pipeline'),
+      keywords: ['kanban', 'board', 'stages', 'hiring'],
+    },
+    {
       id: 'action-upload',
       label: 'Upload a Resume',
       section: 'Actions',

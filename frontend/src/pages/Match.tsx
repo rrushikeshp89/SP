@@ -7,8 +7,11 @@ import {
   Users,
   Zap,
   ChevronRight,
+  Lightbulb,
+  AlertTriangle,
+  Settings2,
 } from 'lucide-react';
-import { listResumes, listJobs, scoreOne, scoreBatch } from '../api';
+import { listResumes, listJobs, scoreOne, scoreBatch, listProfiles } from '../api';
 import ScoreRing from '../components/ScoreRing';
 import ScoreBar from '../components/ScoreBar';
 import SkillBadge from '../components/SkillBadge';
@@ -17,20 +20,24 @@ import PageHeader from '../components/PageHeader';
 import CustomSelect from '../components/CustomSelect';
 import type { SelectOption } from '../components/CustomSelect';
 import { useToast } from '../components/Toast';
-import type { Resume, Job, ScoreResponse, BatchScoreResponse } from '../types';
+import { useBlindMode } from '../BlindModeContext';
+import type { Resume, Job, ScoreResponse, BatchScoreResponse, ScoringProfile, GapItem } from '../types';
 
 type Mode = 'single' | 'batch';
 
 export default function Match() {
   const toast = useToast();
+  const { mask } = useBlindMode();
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [profiles, setProfiles] = useState<ScoringProfile[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [mode, setMode] = useState<Mode>('single');
   const [selectedResume, setSelectedResume] = useState('');
   const [selectedJob, setSelectedJob] = useState('');
   const [selectedResumes, setSelectedResumes] = useState<string[]>([]);
+  const [selectedProfile, setSelectedProfile] = useState('');
 
   const [scoring, setScoring] = useState(false);
   const [singleResult, setSingleResult] = useState<ScoreResponse | null>(null);
@@ -40,9 +47,11 @@ export default function Match() {
     Promise.all([
       listResumes(1, 200).catch(() => ({ items: [] as Resume[], total: 0, page: 1, per_page: 200 })),
       listJobs(1, 200).catch(() => ({ items: [] as Job[], total: 0, page: 1, per_page: 200 })),
-    ]).then(([r, j]) => {
+      listProfiles().catch(() => [] as ScoringProfile[]),
+    ]).then(([r, j, p]) => {
       setResumes(r.items);
       setJobs(j.items);
+      setProfiles(p);
       setLoading(false);
     });
   }, []);
@@ -60,10 +69,10 @@ export default function Match() {
 
     try {
       if (mode === 'single') {
-        const res = await scoreOne(selectedResume, selectedJob);
+        const res = await scoreOne(selectedResume, selectedJob, selectedProfile || undefined);
         setSingleResult(res);
       } else {
-        const res = await scoreBatch(selectedJob, selectedResumes.length ? selectedResumes : resumes.map((r) => r.resume_id));
+        const res = await scoreBatch(selectedJob, selectedResumes.length ? selectedResumes : resumes.map((r) => r.resume_id), selectedProfile || undefined);
         setBatchResult(res);
       }
     } catch (err: any) {
@@ -219,8 +228,8 @@ export default function Match() {
           </div>
         </div>
 
-        {/* Score Button */}
-        <div className="mt-5 flex items-center gap-3">
+        {/* Score Button + Profile Selector */}
+        <div className="mt-5 flex items-center gap-3 flex-wrap">
           <motion.button
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.98 }}
@@ -239,6 +248,29 @@ export default function Match() {
               <><Zap size={16} /> {mode === 'single' ? 'Score Match' : 'Rank All'}</>
             )}
           </motion.button>
+
+          {profiles.length > 0 && (
+            <div className="flex items-center gap-2">
+              <Settings2 size={14} style={{ color: 'var(--text-tertiary)' }} />
+              <select
+                value={selectedProfile}
+                onChange={(e) => setSelectedProfile(e.target.value)}
+                className="px-3 py-2 text-sm rounded-lg border outline-none"
+                style={{
+                  background: 'var(--bg-input)',
+                  borderColor: 'var(--border-light)',
+                  color: 'var(--text-primary)',
+                }}
+              >
+                <option value="">Default weights</option>
+                {profiles.map((p) => (
+                  <option key={p.profile_id} value={p.profile_id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
       </div>
 
@@ -350,6 +382,66 @@ export default function Match() {
               </div>
             )}
 
+            {/* AI Explanation */}
+            {singleResult.explanation && (
+              <div
+                className="mt-4 p-4 rounded-lg flex items-start gap-3"
+                style={{ background: 'linear-gradient(135deg, rgba(124,58,237,0.06), rgba(99,102,241,0.06))', border: '1px solid rgba(124,58,237,0.12)' }}
+              >
+                <Lightbulb size={18} className="shrink-0 mt-0.5" style={{ color: '#7c3aed' }} />
+                <div>
+                  <p className="text-xs font-bold mb-1 uppercase tracking-wide" style={{ color: '#7c3aed' }}>
+                    AI Explanation
+                  </p>
+                  <p className="text-sm leading-relaxed" style={{ color: 'var(--text-primary)' }}>
+                    {singleResult.explanation}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Gap Report */}
+            {singleResult.gap_report && singleResult.gap_report.length > 0 && (
+              <div className="mt-4 p-4 rounded-lg" style={{ background: 'var(--bg-secondary)' }}>
+                <p className="text-xs font-semibold mb-3 flex items-center gap-1.5" style={{ color: 'var(--text-secondary)' }}>
+                  <AlertTriangle size={13} /> Skill Gap Report
+                </p>
+                <div className="flex flex-col gap-2">
+                  {singleResult.gap_report.map((g: GapItem, i: number) => (
+                    <div
+                      key={i}
+                      className="flex items-start gap-3 p-3 rounded-lg"
+                      style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-light)' }}
+                    >
+                      <span
+                        className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase shrink-0 mt-0.5"
+                        style={{
+                          background:
+                            g.impact === 'high' ? '#ef444418' :
+                            g.impact === 'medium' ? '#f59e0b18' :
+                            g.impact === 'info' ? '#7c3aed18' : '#10b98118',
+                          color:
+                            g.impact === 'high' ? '#ef4444' :
+                            g.impact === 'medium' ? '#f59e0b' :
+                            g.impact === 'info' ? '#7c3aed' : '#10b981',
+                        }}
+                      >
+                        {g.impact}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                          {g.category}: {g.item}
+                        </p>
+                        <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
+                          {g.recommendation}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <p className="text-xs mt-3 text-right" style={{ color: 'var(--text-tertiary)' }}>
               Score computed
             </p>
@@ -398,10 +490,10 @@ export default function Match() {
                   {/* Name */}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-                      {c.candidate_name}
+                      {mask(c.candidate_name, i)}
                     </p>
                     <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                      {c.suggestions[0] || 'No suggestions'}
+                      {c.explanation || c.suggestions[0] || 'No suggestions'}
                     </p>
                   </div>
 

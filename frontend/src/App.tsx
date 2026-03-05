@@ -5,6 +5,7 @@ import Resumes from './pages/Resumes';
 import Jobs from './pages/Jobs';
 import Match from './pages/Match';
 import Rankings from './pages/Rankings';
+import Pipeline from './pages/Pipeline';
 
 export default function App() {
   return (
@@ -16,6 +17,7 @@ export default function App() {
           <Route path="jobs" element={<Jobs />} />
           <Route path="match" element={<Match />} />
           <Route path="rankings" element={<Rankings />} />
+          <Route path="pipeline" element={<Pipeline />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

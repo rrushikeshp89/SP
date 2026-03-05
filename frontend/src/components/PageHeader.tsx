@@ -18,6 +18,7 @@ const BREADCRUMB_MAP: Record<string, string> = {
   '/jobs': 'Jobs',
   '/match': 'Match & Score',
   '/rankings': 'Rankings',
+  '/pipeline': 'Pipeline',
 };
 
 export default function PageHeader({
