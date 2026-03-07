@@ -1,5 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
-import { motion } from 'framer-motion';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   Kanban,
   GripVertical,
@@ -32,16 +31,6 @@ const STAGE_LABELS: Record<CandidateStatus, string> = {
   rejected: 'Rejected',
 };
 
-const container = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.06 } },
-};
-
-const item = {
-  hidden: { opacity: 0, y: 12 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.35 } },
-};
-
 export default function Pipeline() {
   const [data, setData] = useState<PipelineResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -49,6 +38,26 @@ export default function Pipeline() {
   const [dragOverStage, setDragOverStage] = useState<CandidateStatus | null>(null);
   const { mask } = useBlindMode();
   const toast = useToast();
+  const toastRef = useRef(toast);
+  toastRef.current = toast;
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollSpeedRef = useRef(0);
+  const rafRef = useRef<number | null>(null);
+
+  // Continuous smooth auto-scroll loop while dragging near edges
+  useEffect(() => {
+    const tick = () => {
+      const el = scrollRef.current;
+      if (el && scrollSpeedRef.current !== 0) {
+        el.scrollLeft += scrollSpeedRef.current;
+      }
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -56,11 +65,11 @@ export default function Pipeline() {
       const res = await getPipeline();
       setData(res);
     } catch {
-      toast.error('Failed to load pipeline');
+      toastRef.current.error('Failed to load pipeline');
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, []);
 
   useEffect(() => { refresh(); }, [refresh]);
 
@@ -70,14 +79,45 @@ export default function Pipeline() {
     setDraggedId(candidateId);
   };
 
+  const handleDragEnd = () => {
+    setDraggedId(null);
+    setDragOverStage(null);
+    scrollSpeedRef.current = 0;
+  };
+
   const handleDragOver = (e: React.DragEvent, stage: CandidateStatus) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     setDragOverStage(stage);
   };
 
+  // Update scroll speed based on mouse position relative to board edges
+  const handleBoardDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    const container = scrollRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    const edgeZone = 150;
+    const mouseX = e.clientX;
+    const maxSpeed = 25;
+
+    if (mouseX < rect.left + edgeZone) {
+      const ratio = 1 - (mouseX - rect.left) / edgeZone;
+      scrollSpeedRef.current = -maxSpeed * Math.pow(ratio, 1.5);
+    } else if (mouseX > rect.right - edgeZone) {
+      const ratio = 1 - (rect.right - mouseX) / edgeZone;
+      scrollSpeedRef.current = maxSpeed * Math.pow(ratio, 1.5);
+    } else {
+      scrollSpeedRef.current = 0;
+    }
+  };
+
   const handleDragLeave = () => {
     setDragOverStage(null);
+  };
+
+  const handleBoardDragLeave = () => {
+    scrollSpeedRef.current = 0;
   };
 
   const handleDrop = async (e: React.DragEvent, targetStage: CandidateStatus) => {
@@ -85,6 +125,7 @@ export default function Pipeline() {
     const candidateId = e.dataTransfer.getData('text/plain');
     setDraggedId(null);
     setDragOverStage(null);
+    scrollSpeedRef.current = 0;
 
     if (!candidateId || !data) return;
 
@@ -131,7 +172,7 @@ export default function Pipeline() {
     : [];
 
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
+    <div className="space-y-6">
       <PageHeader
         title="Pipeline"
         description={`${data?.total ?? 0} candidates across ${VALID_STATUSES.length} stages`}
@@ -155,10 +196,12 @@ export default function Pipeline() {
         }
       />
 
-      <motion.div
-        variants={item}
+      <div
+        ref={scrollRef}
         className="flex gap-4 overflow-x-auto pb-4"
         style={{ minHeight: 'calc(100vh - 240px)' }}
+        onDragOver={handleBoardDragOver}
+        onDragLeave={handleBoardDragLeave}
       >
         {(data?.stages ?? VALID_STATUSES.map((s) => ({ stage: s, count: 0, candidates: [] }))).map(
           (stage) => {
@@ -209,20 +252,18 @@ export default function Pipeline() {
                     const isDragging = draggedId === c.resume_id;
 
                     return (
-                      <motion.div
+                      <div
                         key={c.resume_id}
-                        layout
                         draggable
-                        onDragStart={(e) => handleDragStart(e as unknown as React.DragEvent, c.resume_id)}
-                        onDragEnd={() => { setDraggedId(null); setDragOverStage(null); }}
-                        className="rounded-xl p-3 transition-all"
+                        onDragStart={(e) => handleDragStart(e, c.resume_id)}
+                        onDragEnd={handleDragEnd}
+                        className="rounded-xl p-3 transition-shadow"
                         style={{
                           background: 'var(--bg-primary)',
                           border: '1px solid var(--border-light)',
-                          opacity: isDragging ? 0.5 : 1,
+                          opacity: isDragging ? 0.4 : 1,
                           cursor: 'grab',
                         }}
-                        whileHover={{ scale: 1.01 }}
                       >
                         <div className="flex items-start gap-2">
                           <GripVertical size={14} style={{ color: 'var(--text-tertiary)', marginTop: 2, flexShrink: 0 }} />
@@ -270,7 +311,7 @@ export default function Pipeline() {
                             )}
                           </div>
                         </div>
-                      </motion.div>
+                      </div>
                     );
                   })}
 
@@ -291,7 +332,7 @@ export default function Pipeline() {
             );
           }
         )}
-      </motion.div>
-    </motion.div>
+      </div>
+    </div>
   );
 }

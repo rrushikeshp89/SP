@@ -1,4 +1,5 @@
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useDropzone } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -13,6 +14,7 @@ import {
   Trash2,
   StickyNote,
   Files,
+  ChevronDown,
 } from 'lucide-react';
 import { uploadResume, listResumes, deleteResume, updateResumeMeta, uploadBulk } from '../api';
 import SkillBadge from '../components/SkillBadge';
@@ -32,6 +34,136 @@ const STATUS_COLORS: Record<CandidateStatus, string> = {
   hired: '#10b981',
   rejected: '#ef4444',
 };
+
+const STATUS_LABELS: Record<CandidateStatus, string> = {
+  new: 'New',
+  screening: 'Screening',
+  interview: 'Interview',
+  offered: 'Offered',
+  hired: 'Hired',
+  rejected: 'Rejected',
+};
+
+function StatusDropdown({ value, onChange }: { value: CandidateStatus; onChange: (v: CandidateStatus) => void }) {
+  const [open, setOpen] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLUListElement>(null);
+  const [pos, setPos] = useState({ top: 0, left: 0, width: 0, flipUp: false });
+
+  // Continuously reposition while open so it tracks the button during scroll
+  useEffect(() => {
+    if (!open) return;
+    let raf: number;
+    const update = () => {
+      if (btnRef.current) {
+        const rect = btnRef.current.getBoundingClientRect();
+        const menuHeight = 260;
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const flipUp = spaceBelow < menuHeight && rect.top > menuHeight;
+        setPos({
+          top: flipUp ? rect.top : rect.bottom + 4,
+          left: rect.left,
+          width: rect.width,
+          flipUp,
+        });
+      }
+      raf = requestAnimationFrame(update);
+    };
+    raf = requestAnimationFrame(update);
+    return () => cancelAnimationFrame(raf);
+  }, [open]);
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return;
+    const handleClick = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (btnRef.current?.contains(t) || menuRef.current?.contains(t)) return;
+      setOpen(false);
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [open]);
+
+  const color = STATUS_COLORS[value];
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={() => setOpen((p) => !p)}
+        className="w-full flex items-center justify-between px-3 py-2 text-sm rounded-xl border outline-none transition-all"
+        style={{
+          background: 'var(--bg-secondary)',
+          borderColor: open ? color : 'var(--border-light)',
+          boxShadow: open ? `0 0 0 2px ${color}33` : undefined,
+          cursor: 'pointer',
+        }}
+      >
+        <span className="flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: color }} />
+          <span style={{ color, fontWeight: 600 }}>{STATUS_LABELS[value]}</span>
+        </span>
+        <ChevronDown size={14} style={{ color: 'var(--text-tertiary)', transform: open ? 'rotate(180deg)' : undefined, transition: 'transform 0.2s' }} />
+      </button>
+
+      {open && createPortal(
+        <AnimatePresence>
+          <motion.ul
+            ref={menuRef}
+            initial={{ opacity: 0, y: pos.flipUp ? 4 : -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: pos.flipUp ? 4 : -4 }}
+            transition={{ duration: 0.15 }}
+            className="fixed z-[9999] rounded-xl border"
+            style={{
+              top: pos.flipUp ? undefined : pos.top,
+              bottom: pos.flipUp ? window.innerHeight - pos.top + 4 : undefined,
+              left: pos.left,
+              width: pos.width,
+              maxHeight: 'min(260px, 40vh)',
+              overflowY: 'auto',
+              background: 'var(--bg-primary)',
+              borderColor: 'var(--border-light)',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+              listStyle: 'none',
+              padding: 4,
+              margin: 0,
+            }}
+          >
+            {VALID_STATUSES.map((s) => {
+              const sc = STATUS_COLORS[s];
+              const isActive = s === value;
+              return (
+                <li key={s}>
+                  <button
+                    type="button"
+                    onClick={() => { onChange(s); setOpen(false); }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg transition-colors"
+                    style={{
+                      background: isActive ? `${sc}18` : 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: sc,
+                      fontWeight: isActive ? 700 : 500,
+                    }}
+                    onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = `${sc}10`; }}
+                    onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+                  >
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: sc }} />
+                    {STATUS_LABELS[s]}
+                  </button>
+                </li>
+              );
+            })}
+          </motion.ul>
+        </AnimatePresence>,
+        document.body
+      )}
+    </>
+  );
+}
 
 export default function Resumes() {
   const toast = useToast();
@@ -521,22 +653,10 @@ export default function Resumes() {
                                 <label className="text-xs font-semibold mb-1 block" style={{ color: 'var(--text-secondary)' }}>
                                   Status
                                 </label>
-                                <select
-                                  value={r.status || 'new'}
-                                  onChange={(e) => handleStatusChange(r.resume_id, e.target.value as CandidateStatus)}
-                                  className="w-full px-3 py-2 text-sm rounded-lg border outline-none"
-                                  style={{
-                                    background: 'var(--bg-input)',
-                                    borderColor: 'var(--border-light)',
-                                    color: 'var(--text-primary)',
-                                  }}
-                                >
-                                  {VALID_STATUSES.map((s) => (
-                                    <option key={s} value={s}>
-                                      {s.charAt(0).toUpperCase() + s.slice(1)}
-                                    </option>
-                                  ))}
-                                </select>
+                                <StatusDropdown
+                                  value={(r.status as CandidateStatus) || 'new'}
+                                  onChange={(val) => handleStatusChange(r.resume_id, val)}
+                                />
                               </div>
                               <div>
                                 <label className="text-xs font-semibold mb-1 flex items-center gap-1" style={{ color: 'var(--text-secondary)' }}>

@@ -84,7 +84,7 @@ export default function Shell() {
         >
           <Menu size={18} />
         </button>
-        <img src="/logo.png" alt="Tesseract" style={{ width: 28, height: 28, objectFit: 'contain' }} />
+        <img src="/logo.svg" alt="Tesseract" style={{ width: 28, height: 28, objectFit: 'contain' }} />
         <span className="text-sm font-extrabold tracking-widest uppercase" style={{ color: '#7c3aed' }}>
           Tesseract
         </span>
@@ -102,7 +102,7 @@ export default function Shell() {
       >
         {/* Desktop-only left offset via inline style + media query handled by a wrapper */}
         <div className="lg:ml-[272px]">
-          <div className="mx-auto max-w-6xl px-5 sm:px-8 lg:px-10 py-6 lg:py-8">
+          <div className="mx-auto max-w-6xl px-5 sm:px-8 lg:px-10 pt-3 lg:pt-8 pb-6 lg:pb-8">
             <AnimatePresence mode="wait">
               <motion.div
                 key={location.pathname}

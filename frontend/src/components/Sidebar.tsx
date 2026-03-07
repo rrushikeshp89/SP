@@ -50,7 +50,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img
-              src="/logo.png"
+              src="/logo.svg"
               alt="Tesseract"
               className="rounded-xl shrink-0"
               style={{
@@ -194,7 +194,8 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
       </nav>
 
       {/* Footer */}
-      <div className="px-4 pb-6 flex flex-col gap-2">
+      <div className="mt-auto px-4 pb-6 flex flex-col gap-2">
+        <div className="mb-2" style={{ borderTop: '1px solid var(--border-light)' }} />
         {/* Blind mode toggle */}
         <button
           onClick={toggleBlind}
@@ -233,34 +234,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
           </span>
         </button>
 
-        {/* User profile */}
-        <div
-          className="flex items-center gap-3 px-4 py-3 rounded-xl"
-          style={{
-            background: 'var(--bg-tertiary)',
-            border: '1px solid var(--border-light)',
-          }}
-        >
-          <div
-            className="flex items-center justify-center rounded-full text-xs font-bold shrink-0"
-            style={{
-              width: 36,
-              height: 36,
-              background: 'linear-gradient(135deg, #a78bfa, #7c3aed)',
-              color: '#fff',
-            }}
-          >
-            HR
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
-              HR Manager
-            </p>
-            <p className="text-[11px] truncate" style={{ color: 'var(--text-tertiary)' }}>
-              admin@company.com
-            </p>
-          </div>
-        </div>
+
       </div>
     </aside>
   );

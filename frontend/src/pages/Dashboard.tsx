@@ -127,7 +127,7 @@ export default function Dashboard() {
   return (
     <motion.div variants={container} initial="hidden" animate="show">
       {/* ── Greeting Hero ── */}
-      <motion.div variants={item} className="mb-10">
+      <motion.div variants={item} className="mb-6">
         <div
           className="rounded-3xl relative overflow-hidden p-8 sm:p-10"
           style={{
