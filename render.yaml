@@ -1,0 +1,31 @@
+# ============================================
+# Render Blueprint — Tesseract Backend
+# Deploy via: https://render.com/deploy
+# ============================================
+
+services:
+  - type: web
+    name: tesseract-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile.backend
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      # --- Cloud Database (Neon free-tier PostgreSQL) ---
+      - key: DATABASE_URL
+        sync: false  # set manually in Render dashboard
+      # --- Cloud Cache (Upstash free-tier Redis) ---
+      - key: REDIS_URL
+        sync: false  # set manually in Render dashboard (optional)
+      # --- Render injects PORT automatically ---
+      - key: WORKERS
+        value: "1"  # single worker to fit in free-tier 512 MB RAM
+      # --- Scoring Weights (defaults are fine) ---
+      - key: WEIGHT_SEMANTIC
+        value: "0.40"
+      - key: WEIGHT_SKILLS
+        value: "0.35"
+      - key: WEIGHT_EXPERIENCE
+        value: "0.15"
+      - key: WEIGHT_EDUCATION
+        value: "0.10"

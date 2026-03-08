@@ -15,14 +15,16 @@ import type {
   CandidateStatus,
 } from './types';
 
+const BASE_URL = import.meta.env.VITE_API_URL || '';
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: `${BASE_URL}/api`,
   timeout: 120_000,
 });
 
 /* ── Health ── */
 export const getHealth = () =>
-  axios.get<HealthResponse>('/health').then((r) => r.data);
+  axios.get<HealthResponse>(`${BASE_URL}/health`).then((r) => r.data);
 
 /* ── Dashboard Stats ── */
 export const getStats = () =>

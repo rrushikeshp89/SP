@@ -48,8 +48,17 @@ TMP_FILE_TTL_SECONDS = int(os.getenv("TMP_FILE_TTL_SECONDS", "3600"))
 # --- Skill Taxonomy ---
 SKILL_TAXONOMY_PATH = _PROJECT_ROOT / "tools" / "data" / "skill_taxonomy.json"
 
-# --- Database URL ---
-DATABASE_URL = f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
+# --- Database URL (cloud-first: honours DATABASE_URL from Neon / Render / etc.) ---
+DATABASE_URL = os.getenv("DATABASE_URL")
+if DATABASE_URL:
+    # Some providers emit postgres:// instead of postgresql://
+    if DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+else:
+    DATABASE_URL = f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
+
+# --- Redis URL (cloud-first: honours REDIS_URL from Upstash / Render / etc.) ---
+REDIS_URL = os.getenv("REDIS_URL")  # e.g. rediss://default:xxx@host:6379
 
 # --- Alias ---
 EMBEDDING_MODEL_NAME = EMBEDDING_MODEL  # backward-compat alias
@@ -62,6 +71,3 @@ LOG_LEVEL = os.getenv("LOG_LEVEL", "info")
 
 # --- Skill Taxonomy ---
 SKILL_TAXONOMY_PATH = _PROJECT_ROOT / "tools" / "data" / "skill_taxonomy.json"
-
-# --- DB Connection String ---
-DATABASE_URL = f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"

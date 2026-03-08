@@ -26,13 +26,7 @@ import psycopg2  # type: ignore[import-untyped]
 import psycopg2.pool  # type: ignore[import-untyped]
 import psycopg2.extras  # type: ignore[import-untyped]
 
-from app.config import (
-    POSTGRES_HOST,
-    POSTGRES_PORT,
-    POSTGRES_DB,
-    POSTGRES_USER,
-    POSTGRES_PASSWORD,
-)
+from app.config import DATABASE_URL
 
 # ── Connection Pool ──────────────────────────────────
 
@@ -46,11 +40,7 @@ def _get_pool() -> psycopg2.pool.ThreadedConnectionPool:
         _pool = psycopg2.pool.ThreadedConnectionPool(
             minconn=1,
             maxconn=10,
-            host=POSTGRES_HOST,
-            port=POSTGRES_PORT,
-            dbname=POSTGRES_DB,
-            user=POSTGRES_USER,
-            password=POSTGRES_PASSWORD,
+            dsn=DATABASE_URL,
         )
     return _pool
 
