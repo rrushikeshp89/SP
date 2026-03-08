@@ -391,7 +391,7 @@ export default function Rankings() {
                           <td className="py-2 capitalize">{key}</td>
                           {compareCandidates.map((c) => (
                             <td key={c.resume_id} className="text-center py-2 font-medium">
-                              {c.breakdown[key].score.toFixed(1)}%
+                              {Math.round(c.breakdown[key].score)}%
                             </td>
                           ))}
                         </tr>
@@ -399,7 +399,7 @@ export default function Rankings() {
                       <tr className="font-bold">
                         <td className="py-2">Overall</td>
                         {compareCandidates.map((c) => (
-                          <td key={c.resume_id} className="text-center py-2">{c.overall_score.toFixed(1)}%</td>
+                          <td key={c.resume_id} className="text-center py-2">{Math.round(c.overall_score)}%</td>
                         ))}
                       </tr>
                     </tbody>

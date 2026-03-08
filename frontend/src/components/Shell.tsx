@@ -102,7 +102,7 @@ export default function Shell() {
       >
         {/* Desktop-only left offset via inline style + media query handled by a wrapper */}
         <div className="lg:ml-[272px]">
-          <div className="mx-auto max-w-6xl px-5 sm:px-8 lg:px-10 pt-3 lg:pt-8 pb-6 lg:pb-8">
+          <div className="mx-auto max-w-6xl px-5 sm:px-8 lg:px-10 pt-2 lg:pt-1 pb-6 lg:pb-8">
             <AnimatePresence mode="wait">
               <motion.div
                 key={location.pathname}

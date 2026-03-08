@@ -5,6 +5,10 @@
    Inspired by: Slack, Figma, Linear
    ═══════════════════════════════════════════════ */
 
+html {
+  zoom: 0.9;
+}
+
 :root {
   /* ── Brand palette (violet-indigo) ── */
   --color-brand-50: #ede9fe;

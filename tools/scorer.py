@@ -374,7 +374,7 @@ def generate_explanation(result: dict, resume: dict, job: dict) -> str:
     candidate = resume.get("candidate_name", "This candidate")
     job_title = job.get("title", "this position")
 
-    parts = [f"{candidate} is {strength} match for {job_title} with an overall fit score of {score}%."]
+    parts = [f"{candidate} is {strength} match for {job_title} with an overall fit score of {score:.0f}%."]
 
     # Skills insight
     if matched:
@@ -464,9 +464,9 @@ def generate_gap_report(result: dict, resume: dict, job: dict) -> list[dict]:
         potential = min(95, current + len(gaps) * 3)
         gaps.insert(0, {
             "category": "summary",
-            "item": f"Potential: {current}% → {potential}%",
+            "item": f"Potential: {round(current)}% → {round(potential)}%",
             "impact": "info",
-            "recommendation": f"Closing {len(gaps) - 1} gap{'s' if len(gaps) > 2 else ''} could raise the score to ~{potential}%",
+            "recommendation": f"Closing {len(gaps) - 1} gap{'s' if len(gaps) > 2 else ''} could raise the score to ~{round(potential)}%",
         })
 
     return gaps

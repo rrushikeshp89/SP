@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus,
@@ -9,6 +10,7 @@ import {
   ChevronDown,
   ChevronUp,
   Trash2,
+  GraduationCap,
 } from 'lucide-react';
 import { createJob, listJobs, deleteJob } from '../api';
 import SkillBadge from '../components/SkillBadge';
@@ -22,6 +24,134 @@ const POPULAR_SKILLS = [
   'Python', 'JavaScript', 'TypeScript', 'React', 'Node.js', 'FastAPI',
   'Docker', 'AWS', 'PostgreSQL', 'Machine Learning', 'Git', 'REST API',
 ];
+
+const DEGREE_OPTIONS = [
+  { value: '', label: 'Degree level (optional)', color: 'var(--text-tertiary)', icon: '–' },
+  { value: 'high_school', label: 'High School', color: '#64748b', icon: '🎓' },
+  { value: 'associate', label: 'Associate', color: '#8b5cf6', icon: '📋' },
+  { value: 'bachelor', label: 'Bachelor', color: '#3b82f6', icon: '📘' },
+  { value: 'master', label: 'Master', color: '#f59e0b', icon: '📙' },
+  { value: 'phd', label: 'PhD', color: '#10b981', icon: '🔬' },
+];
+
+function DegreeDropdown({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLUListElement>(null);
+  const [pos, setPos] = useState({ top: 0, left: 0, width: 0, flipUp: false });
+
+  useEffect(() => {
+    if (!open) return;
+    let raf: number;
+    const update = () => {
+      if (btnRef.current) {
+        const rect = btnRef.current.getBoundingClientRect();
+        const menuHeight = 280;
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const flipUp = spaceBelow < menuHeight && rect.top > menuHeight;
+        setPos({ top: flipUp ? rect.top : rect.bottom + 4, left: rect.left, width: rect.width, flipUp });
+      }
+      raf = requestAnimationFrame(update);
+    };
+    raf = requestAnimationFrame(update);
+    return () => cancelAnimationFrame(raf);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleClick = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (btnRef.current?.contains(t) || menuRef.current?.contains(t)) return;
+      setOpen(false);
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [open]);
+
+  const selected = DEGREE_OPTIONS.find((o) => o.value === value) || DEGREE_OPTIONS[0];
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={() => setOpen((p) => !p)}
+        className="w-full flex items-center justify-between px-3 py-2.5 text-sm rounded-lg border outline-none transition-all"
+        style={{
+          background: 'var(--bg-secondary)',
+          borderColor: open ? 'var(--accent)' : 'var(--border-light)',
+          boxShadow: open ? '0 0 0 2px var(--accent-muted)' : undefined,
+          cursor: 'pointer',
+        }}
+      >
+        <span className="flex items-center gap-2">
+          {value ? (
+            <span className="text-sm">{selected.icon}</span>
+          ) : (
+            <GraduationCap size={14} style={{ color: 'var(--text-tertiary)' }} />
+          )}
+          <span style={{ color: value ? 'var(--text-primary)' : 'var(--text-tertiary)', fontWeight: value ? 500 : 400 }}>
+            {selected.label}
+          </span>
+        </span>
+        <ChevronDown size={14} style={{ color: 'var(--text-tertiary)', transform: open ? 'rotate(180deg)' : undefined, transition: 'transform 0.2s' }} />
+      </button>
+
+      {open && createPortal(
+        <AnimatePresence>
+          <motion.ul
+            ref={menuRef}
+            initial={{ opacity: 0, y: pos.flipUp ? 4 : -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: pos.flipUp ? 4 : -4 }}
+            transition={{ duration: 0.15 }}
+            className="fixed z-[9999] rounded-xl border"
+            style={{
+              top: pos.flipUp ? undefined : pos.top,
+              bottom: pos.flipUp ? window.innerHeight - pos.top + 4 : undefined,
+              left: pos.left,
+              width: pos.width,
+              maxHeight: 'min(280px, 40vh)',
+              overflowY: 'auto',
+              background: 'var(--bg-primary)',
+              borderColor: 'var(--border-light)',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+              listStyle: 'none',
+              padding: 4,
+              margin: 0,
+            }}
+          >
+            {DEGREE_OPTIONS.map((opt) => {
+              const isActive = opt.value === value;
+              return (
+                <li key={opt.value}>
+                  <button
+                    type="button"
+                    onClick={() => { onChange(opt.value); setOpen(false); }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg transition-colors"
+                    style={{
+                      background: isActive ? `${opt.color}18` : 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: isActive ? opt.color : 'var(--text-primary)',
+                      fontWeight: isActive ? 600 : 400,
+                    }}
+                    onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = 'var(--bg-secondary)'; }}
+                    onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+                  >
+                    <span className="text-sm">{opt.icon}</span>
+                    {opt.label}
+                  </button>
+                </li>
+              );
+            })}
+          </motion.ul>
+        </AnimatePresence>,
+        document.body
+      )}
+    </>
+  );
+}
 
 export default function Jobs() {
   const toast = useToast();
@@ -272,19 +402,7 @@ export default function Jobs() {
                   className="px-3 py-2.5 text-sm rounded-lg border outline-none"
                   style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-light)', color: 'var(--text-primary)' }}
                 />
-                <select
-                  value={degreeLevel}
-                  onChange={(e) => setDegreeLevel(e.target.value)}
-                  className="px-3 py-2.5 text-sm rounded-lg border outline-none"
-                  style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-light)', color: 'var(--text-primary)' }}
-                >
-                  <option value="">Degree level (optional)</option>
-                  <option value="high_school">High School</option>
-                  <option value="associate">Associate</option>
-                  <option value="bachelor">Bachelor</option>
-                  <option value="master">Master</option>
-                  <option value="phd">PhD</option>
-                </select>
+                <DegreeDropdown value={degreeLevel} onChange={setDegreeLevel} />
                 <input
                   type="text"
                   placeholder="Field of study"

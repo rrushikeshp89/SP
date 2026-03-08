@@ -161,7 +161,7 @@ export default function Dashboard() {
                 </span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
-                {greeting}, HR Manager
+                {greeting}
               </h1>
               <p className="text-sm mt-2 max-w-lg leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
                 Your hiring pipeline is ready. Upload resumes, create jobs, and let AI score the matches.
