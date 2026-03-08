@@ -1,5 +1,5 @@
 # ============================================
-# Smart Resume Matching Engine — .gitignore
+# Tesseract ATS — .gitignore
 # ============================================
 
 # Environment
@@ -20,10 +20,10 @@ dist/
 .venv/
 venv/
 env/
+.pytest_cache/
 
 # Temporary processing
-.tmp/*
-!.tmp/README.md
+.tmp/
 
 # ML Models (large files)
 models/
@@ -42,6 +42,7 @@ node_modules/
 frontend/build/
 frontend/dist/
 .next/
+.vite/
 
 # Docker
 docker-compose.override.yml

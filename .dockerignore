@@ -1,5 +1,5 @@
 # ============================================
-# Docker ignore — keep images lean
+# Tesseract ATS — Docker ignore
 # ============================================
 
 # Version control
@@ -21,8 +21,7 @@ frontend/.vite
 frontend/dist
 
 # Temp files
-.tmp/*
-!.tmp/README.md
+.tmp/
 
 # IDE
 .vscode
