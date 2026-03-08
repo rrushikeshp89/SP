@@ -4,14 +4,9 @@
 # ============================================
 
 # ── Stage 1: Build ──
-# NOTE: node:22-alpine bundles npm 10.x whose vendored tar, minimatch,
-# and glob packages carry HIGH CVEs.  We upgrade npm immediately below
-# to pull in patched versions (tar ≥7.5.8, minimatch ≥9.0.7, glob ≥10.5).
-# This stage is discarded after build — the final image is nginx.
-FROM node:22-alpine AS builder
-
-# Patch npm's bundled vulnerable packages (tar, minimatch, glob)
-RUN npm i -g npm@latest 2>/dev/null
+# Build-only stage — discarded in the final image (nginx).
+# CVEs in the Node base image do NOT affect production (only nginx ships).
+FROM node:24-alpine AS builder
 
 WORKDIR /app
 
