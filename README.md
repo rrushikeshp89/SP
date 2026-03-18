@@ -4,6 +4,17 @@ An explainable, deterministic resume-to-job matching platform with a FastAPI bac
 
 If you only read one line: this project turns raw resumes and job descriptions into transparent, auditable fit scores and ranked shortlists.
 
+![Python](https://img.shields.io/badge/Python-3.13+-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688?style=for-the-badge&logo=fastapi&logoColor=white)
+![React](https://img.shields.io/badge/React-19-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-6.x-646CFF?style=for-the-badge&logo=vite&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis-7-DC382D?style=for-the-badge&logo=redis&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![Nginx](https://img.shields.io/badge/Nginx-Frontend%20Serve-009639?style=for-the-badge&logo=nginx&logoColor=white)
+![SentenceTransformers](https://img.shields.io/badge/Sentence--Transformers-all--MiniLM--L6--v2-FF6F00?style=for-the-badge)
+
 ---
 
 ## Start Here: Choose Your Journey
@@ -37,6 +48,45 @@ Then do this mini tour:
 5. Move candidates through stages in `Pipeline`.
 
 If everything works, you will have a complete ingest -> score -> rank -> pipeline loop running locally.
+
+### Role-Based Quick Paths
+
+<details>
+<summary>I am a recruiter and just want outcomes</summary>
+
+1. Upload candidate resumes in `Resumes`.
+2. Create one role in `Jobs`.
+3. Open `Rankings` and run batch score.
+4. Export CSV and share shortlist.
+
+Expected result: ranked, explainable shortlist in under a few minutes.
+
+</details>
+
+<details>
+<summary>I am an engineer validating the platform</summary>
+
+1. Check `GET /health`.
+2. Hit `POST /api/resumes/upload` and `POST /api/jobs`.
+3. Run `POST /api/score/batch`.
+4. Verify persistence with `GET /api/score/history`.
+5. Move candidate stages via `PATCH /api/resumes/{resume_id}`.
+
+Expected result: end-to-end deterministic pipeline with persisted audit artifacts.
+
+</details>
+
+<details>
+<summary>I am an architect evaluating production readiness</summary>
+
+1. Review `docker-compose.yml` service topology.
+2. Review `init.sql` schema/index strategy.
+3. Inspect `tools/scorer.py` for scoring explainability.
+4. Validate deployment options in `DEPLOY.md`.
+
+Expected result: clear separation of concerns, reproducible scoring, and simple deploy path.
+
+</details>
 
 ---
 
